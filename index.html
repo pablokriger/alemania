@@ -9,6 +9,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* (estilos idénticos a la versión anterior) */
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Roboto,system-ui,sans-serif; }
         body { background:#f5f7fa; color:#1e2a3a; min-height:100vh; display:flex; flex-direction:column; }
         #loginOverlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; transition:opacity 0.4s ease; }
@@ -50,7 +51,6 @@
         .list-container::-webkit-scrollbar-track { background:#f0f0f0; border-radius:8px; }
         .list-container::-webkit-scrollbar-thumb { background:#b0b0b0; border-radius:8px; }
 
-        /* Cuadro de actividad actual / próxima */
         .current-highlight {
             margin: 0 16px 16px 16px;
             padding: 16px 20px;
@@ -116,7 +116,6 @@
         }
         .current-highlight .content .lugar i { color: #888; }
 
-        /* Estilos para agrupación por día (acordeón) */
         .day-group { margin-bottom:12px; border-radius:16px; overflow:hidden; border:1px solid #e9edf2; }
         .day-header {
             background:#f8faff; padding:12px 18px; cursor:pointer; display:flex;
@@ -181,7 +180,7 @@
 </head>
 <body>
 
-<!-- LOGIN OVERLAY (solo usuario) -->
+<!-- LOGIN OVERLAY -->
 <div id="loginOverlay">
     <div class="login-card">
         <i class="fas fa-plane-departure"></i>
@@ -223,7 +222,6 @@
                 <span><i class="fas fa-list-ul" style="margin-right:8px;"></i>Actividades</span>
                 <small id="activityCounter">0</small>
             </div>
-            <!-- Aquí se insertará el cuadro de actividad actual/próxima -->
             <div id="currentHighlightContainer"></div>
             <div class="list-container" id="activityList">
                 <div style="text-align:center;padding:40px 0;color:#999;">
@@ -256,9 +254,9 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // --------------------------------------------------------------
-    // LOGIN (solo usuario) con memoria en localStorage
-    // --------------------------------------------------------------
+    // ==============================================================
+    // LOGIN CON MEMORIA
+    // ==============================================================
     const validUsers = ['huber', 'kriger', 'visita'];
     const loginOverlay = document.getElementById('loginOverlay');
     const loginUser = document.getElementById('loginUser');
@@ -302,9 +300,9 @@
         loginError.style.display = 'none';
     });
 
-    // --------------------------------------------------------------
+    // ==============================================================
     // SWITCH DE MODO
-    // --------------------------------------------------------------
+    // ==============================================================
     const modeSwitch = document.getElementById('modeSwitch');
     const labelInst = document.getElementById('labelInstitucional');
     const labelTour = document.getElementById('labelTour');
@@ -329,9 +327,9 @@
         }
     });
 
-    // --------------------------------------------------------------
+    // ==============================================================
     // VARIABLES GLOBALES
-    // --------------------------------------------------------------
+    // ==============================================================
     let allActivities = [];
     let map = null;
     let markers = [];
@@ -342,11 +340,11 @@
     let isLocating = false;
 
     const SPREADSHEET_CSV = 'https://docs.google.com/spreadsheets/d/1aB61V0SkRZlwybEJAV9uQx2g1lSQrXQTVBkT5ILKUSQ/export?format=csv';
-    const TIMEZONE = 'Europe/Berlin'; // Zona horaria de las actividades
+    const TIMEZONE = 'Europe/Berlin';
 
-    // --------------------------------------------------------------
-    // PARSER CSV ROBUSTO
-    // --------------------------------------------------------------
+    // ==============================================================
+    // PARSER CSV
+    // ==============================================================
     function parseCSV(text) {
         const rows = [];
         let currentRow = [];
@@ -403,9 +401,9 @@
         return rows;
     }
 
-    // --------------------------------------------------------------
+    // ==============================================================
     // UTILIDADES
-    // --------------------------------------------------------------
+    // ==============================================================
     function parseCoords(str) {
         if (!str) return null;
         const parts = str.split(',').map(s => s.trim());
@@ -429,7 +427,6 @@
         return new Date(y, m, d);
     }
 
-    // Obtener la hora actual en la zona horaria de Alemania
     function getCurrentTimeInGermany() {
         const now = new Date();
         const formatter = new Intl.DateTimeFormat('en-US', {
@@ -445,7 +442,6 @@
         const parts = formatter.formatToParts(now);
         const obj = {};
         parts.forEach(p => { if (p.type !== 'literal') obj[p.type] = parseInt(p.value, 10); });
-        // Crear fecha en UTC con la hora de Alemania
         const dateObj = new Date(Date.UTC(obj.year, obj.month-1, obj.day, obj.hour, obj.minute, obj.second || 0));
         return dateObj;
     }
@@ -462,10 +458,9 @@
             const parts = str.split('-');
             return parts[1].trim();
         }
-        return null; // no es rango
+        return null;
     }
 
-    // Obtener horario de inicio y fin como minutos desde medianoche (en zona horaria de Alemania)
     function getTimeRange(horaStr) {
         const inicio = getStartHour(horaStr);
         const fin = getEndHour(horaStr);
@@ -484,30 +479,37 @@
         return numA - numB;
     }
 
+    // Colores para días (DEFINICIÓN CORREGIDA)
+    const dayColors = [
+        '#4A90D9','#E67E22','#27AE60','#8E44AD','#D35400',
+        '#2C3E50','#16A085','#C0392B','#2980B9','#F39C12',
+        '#1ABC9C','#7F8C8D','#E74C3C','#3498DB','#2ECC71'
+    ];
+    function getDayColor(index) { return dayColors[index % dayColors.length]; }
+
+    // ==============================================================
+    // LÓGICA DE ACTIVIDAD ACTUAL / PRÓXIMA
+    // ==============================================================
     function findCurrentOrNext(activities) {
         if (!activities.length) return null;
         const nowBerlin = getCurrentTimeInGermany();
         const today = new Date(nowBerlin);
         today.setHours(0, 0, 0, 0);
 
-        // Filtrar actividades del día de hoy o futuras (fecha >= hoy)
         const filtered = activities.filter(act => {
             const d = parseDate(act.Fecha);
             return d && d >= today;
         });
 
         if (!filtered.length) {
-            // Si no hay actividades hoy o en el futuro, buscar la última actividad
             const last = activities[activities.length - 1];
             return { activity: last, index: activities.indexOf(last), type: 'finalizada' };
         }
 
-        // Recorrer en orden y determinar si está en curso o es próxima
         for (let i = 0; i < filtered.length; i++) {
             const act = filtered[i];
             const range = getTimeRange(act.Hora);
             const actDate = parseDate(act.Fecha);
-            // Comparar solo si es hoy o si es una fecha futura (en ese caso, es próxima)
             const isToday = actDate.getTime() === today.getTime();
             const nowMinutes = nowBerlin.getHours() * 60 + nowBerlin.getMinutes();
 
@@ -517,21 +519,18 @@
                 } else if (nowMinutes < range.start) {
                     return { activity: act, index: allActivities.indexOf(act), type: 'proxima' };
                 }
-                // Si ya pasó, continuar con la siguiente
             } else {
-                // Fecha futura -> es próxima
                 return { activity: act, index: allActivities.indexOf(act), type: 'proxima' };
             }
         }
 
-        // Si todas las actividades de hoy ya pasaron y no hay futuras, mostrar la última del día
         const lastToday = filtered[filtered.length - 1];
         return { activity: lastToday, index: allActivities.indexOf(lastToday), type: 'finalizada' };
     }
 
-    // --------------------------------------------------------------
-    // RENDER: Cuadro de actividad actual/próxima
-    // --------------------------------------------------------------
+    // ==============================================================
+    // RENDER: CUADRO DESTACADO
+    // ==============================================================
     function renderCurrentHighlight(activities) {
         const container = document.getElementById('currentHighlightContainer');
         if (!activities.length) {
@@ -546,10 +545,7 @@
         }
 
         const { activity, index, type } = result;
-        let labelText = '';
-        let icon = '';
-        let bgColor = '#e6f0ff';
-        let borderColor = '#0066b3';
+        let labelText = '', icon = '', bgColor = '#e6f0ff', borderColor = '#0066b3';
         if (type === 'actual') {
             labelText = '🟢 Actividad en curso';
             icon = 'fa-play';
@@ -569,8 +565,6 @@
 
         const fechaObj = parseDate(activity.Fecha);
         const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' }) : activity.Fecha;
-        const coords = parseCoords(activity.Coordenadas);
-        const hasCoords = !!coords;
 
         let html = `
             <div class="current-highlight" style="background:${bgColor}; border-left-color:${borderColor};">
@@ -589,9 +583,9 @@
         container.innerHTML = html;
     }
 
-    // --------------------------------------------------------------
-    // RENDER: Actividades agrupadas por día (acordeón)
-    // --------------------------------------------------------------
+    // ==============================================================
+    // RENDER: ACTIVIDADES AGRUPADAS POR DÍA (ACORDEÓN)
+    // ==============================================================
     function renderActivities(activities, highlightIndex) {
         const container = document.getElementById('activityList');
         if (!activities.length) {
@@ -599,10 +593,9 @@
             return;
         }
 
-        // Renderizar el cuadro destacado
+        // Cuadro destacado
         renderCurrentHighlight(activities);
 
-        // Agrupar por fecha
         const dayGroups = {};
         activities.forEach((act, idx) => {
             const key = act.Fecha;
@@ -674,7 +667,7 @@
 
         container.innerHTML = html;
 
-        // Eventos para headers (acordeón)
+        // Eventos acordeón
         container.querySelectorAll('.day-header').forEach(header => {
             header.addEventListener('click', function(e) {
                 if (e.target.closest('.action-btn')) return;
@@ -689,7 +682,7 @@
             });
         });
 
-        // Eventos: clic en actividad
+        // Eventos clic en actividad
         container.querySelectorAll('.activity-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 if (e.target.closest('.action-btn')) return;
@@ -698,7 +691,7 @@
             });
         });
 
-        // Eventos: botón "Ver en mapa"
+        // Eventos botón "Ver en mapa"
         container.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -718,9 +711,9 @@
         document.getElementById('activityCounter').textContent = `${activities.length} actividades`;
     }
 
-    // --------------------------------------------------------------
-    // RENDER CALENDARIO (sin cambios)
-    // --------------------------------------------------------------
+    // ==============================================================
+    // RENDER CALENDARIO
+    // ==============================================================
     function renderCalendar(activities, selectedDayNum) {
         const grid = document.getElementById('calendarGrid');
         const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -763,9 +756,9 @@
         });
     }
 
-    // --------------------------------------------------------------
-    // MAPA Y GEOLOCALIZACIÓN (sin cambios)
-    // --------------------------------------------------------------
+    // ==============================================================
+    // MAPA Y GEOLOCALIZACIÓN
+    // ==============================================================
     function initMap() {
         if (map) return;
         map = L.map('map').setView([50.1, 8.5], 6);
@@ -776,8 +769,7 @@
     }
 
     function locateUser() {
-        if (!map) return;
-        if (isLocating) return;
+        if (!map || isLocating) return;
         const btn = document.getElementById('locateBtn');
         btn.classList.add('loading');
 
@@ -893,9 +885,9 @@
         }
     }
 
-    // --------------------------------------------------------------
-    // FILTRO POR DÍA (desde calendario)
-    // --------------------------------------------------------------
+    // ==============================================================
+    // FILTRO POR DÍA (CALENDARIO)
+    // ==============================================================
     function filterByDay(day) {
         selectedDay = day;
         const filtered = allActivities.filter(act => {
@@ -913,9 +905,9 @@
         }
     }
 
-    // --------------------------------------------------------------
+    // ==============================================================
     // CARGA DE DATOS
-    // --------------------------------------------------------------
+    // ==============================================================
     async function loadData() {
         try {
             const response = await fetch(SPREADSHEET_CSV);
@@ -950,11 +942,9 @@
                 return;
             }
 
-            // Calcular highlight basado en la actividad actual o próxima
             const result = findCurrentOrNext(allActivities);
             let highlightIdx = 0;
             if (result) {
-                // Si la actividad está en curso o es próxima, la resaltamos; si finalizada, resaltamos la última
                 if (result.type === 'finalizada') {
                     highlightIdx = allActivities.length - 1;
                 } else {
@@ -963,6 +953,7 @@
             }
             currentHighlightIndex = highlightIdx;
 
+            // Inicializar mapa antes de renderizar
             initMap();
             renderActivities(allActivities, currentHighlightIndex);
             updateMarkers(allActivities, currentHighlightIndex);
@@ -991,6 +982,9 @@
         }
     }
 
+    // ==============================================================
+    // INICIALIZACIÓN
+    // ==============================================================
     function initApp() {
         if (allActivities.length === 0) {
             loadData();
@@ -1001,7 +995,6 @@
         }
     }
 
-    // Si el usuario ya estaba autenticado (auto-login)
     if (window._autoLogged) {
         if (document.readyState === 'complete' || document.readyState === 'interactive') {
             initApp();
