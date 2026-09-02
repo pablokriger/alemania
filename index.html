@@ -50,6 +50,72 @@
         .list-container::-webkit-scrollbar-track { background:#f0f0f0; border-radius:8px; }
         .list-container::-webkit-scrollbar-thumb { background:#b0b0b0; border-radius:8px; }
 
+        /* Cuadro de actividad actual / próxima */
+        .current-highlight {
+            margin: 0 16px 16px 16px;
+            padding: 16px 20px;
+            background: #e6f0ff;
+            border-radius: 16px;
+            border-left: 6px solid #0066b3;
+            box-shadow: 0 2px 8px rgba(0,102,179,0.12);
+        }
+        .current-highlight .label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #0066b3;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .current-highlight .label i { margin-right: 6px; }
+        .current-highlight .content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .current-highlight .content .top {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+        }
+        .current-highlight .content .top .num {
+            font-weight: 700;
+            font-size: 15px;
+            background: #0066b3;
+            color: white;
+            padding: 0 10px;
+            border-radius: 20px;
+            line-height: 26px;
+        }
+        .current-highlight .content .top .fecha {
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .current-highlight .content .top .hora {
+            font-size: 14px;
+            color: #2c3e50;
+            background: white;
+            padding: 0 12px;
+            border-radius: 20px;
+            line-height: 26px;
+            font-weight: 500;
+        }
+        .current-highlight .content .actividad {
+            font-size: 16px;
+            font-weight: 500;
+            margin: 4px 0 2px;
+            line-height: 1.4;
+        }
+        .current-highlight .content .lugar {
+            font-size: 14px;
+            color: #444;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .current-highlight .content .lugar i { color: #888; }
+
         /* Estilos para agrupación por día (acordeón) */
         .day-group { margin-bottom:12px; border-radius:16px; overflow:hidden; border:1px solid #e9edf2; }
         .day-header {
@@ -102,7 +168,7 @@
         .calendar-grid .day-cell.empty:hover { background:transparent; }
         .footer { background:#001f3f; color:#b0c4de; text-align:center; padding:18px 16px; font-size:14px; letter-spacing:0.3px; border-top:1px solid #003366; margin-top:auto; }
         @media (min-width:768px) { .content { padding:24px 32px; } .list-container { max-height:560px; } #map { height:400px; } .header-left h1 { font-size:26px; } .calendar-grid .day-cell { padding:12px 0; font-size:16px; } }
-        @media (max-width:480px) { .header-left h1 { font-size:16px; } .header-right { font-size:12px; } .activity-item .top-row { gap:4px 8px; } .activity-item .fecha { font-size:13px; } .activity-item .hora { font-size:12px; padding:0 8px; } .activity-item .actividad { font-size:14px; } .list-container { max-height:380px; } .header-center .mode-label { font-size:11px; } .switch { width:50px; height:26px; } .slider:before { height:18px; width:18px; left:4px; bottom:4px; } input:checked + .slider:before { transform:translateX(24px); } }
+        @media (max-width:480px) { .header-left h1 { font-size:16px; } .header-right { font-size:12px; } .activity-item .top-row { gap:4px 8px; } .activity-item .fecha { font-size:13px; } .activity-item .hora { font-size:12px; padding:0 8px; } .activity-item .actividad { font-size:14px; } .list-container { max-height:380px; } .header-center .mode-label { font-size:11px; } .switch { width:50px; height:26px; } .slider:before { height:18px; width:18px; left:4px; bottom:4px; } input:checked + .slider:before { transform:translateX(24px); } .current-highlight { margin:0 8px 12px 8px; padding:12px 14px; } .current-highlight .content .top .num { font-size:13px; line-height:22px; } .current-highlight .content .actividad { font-size:14px; } }
         .text-muted { color:#888; }
 
         .locate-btn { position:absolute; bottom:30px; right:20px; z-index:1000; background:white; border:none; border-radius:50%; width:44px; height:44px; box-shadow:0 2px 10px rgba(0,0,0,0.25); font-size:20px; color:#0066b3; cursor:pointer; transition:0.2s; display:flex; align-items:center; justify-content:center; }
@@ -157,6 +223,8 @@
                 <span><i class="fas fa-list-ul" style="margin-right:8px;"></i>Actividades</span>
                 <small id="activityCounter">0</small>
             </div>
+            <!-- Aquí se insertará el cuadro de actividad actual/próxima -->
+            <div id="currentHighlightContainer"></div>
             <div class="list-container" id="activityList">
                 <div style="text-align:center;padding:40px 0;color:#999;">
                     <i class="fas fa-spinner fa-spin" style="font-size:28px;"></i>
@@ -199,24 +267,12 @@
     const app = document.getElementById('app');
     const userDisplay = document.getElementById('userDisplay');
 
-    // Comprobar si hay usuario guardado
     const savedUser = localStorage.getItem('loggedUser');
     if (savedUser && validUsers.includes(savedUser)) {
-        // Saltar login
         loginOverlay.classList.add('hidden');
         app.classList.add('active');
         userDisplay.textContent = savedUser;
-        // Inicializar app después de cargar los datos
-        // Pero los datos se cargan en initApp, que se llama después de login.
-        // Como estamos saltando el login, debemos llamar a initApp manualmente.
-        // Sin embargo, initApp necesita que allActivities esté cargado.
-        // Para evitar duplicar, haremos que initApp se ejecute al final.
-        // Pero necesitamos que el script cargue los datos.
-        // Podemos establecer una variable para indicar que ya estamos logueados.
         window._autoLogged = true;
-        // Llamaremos a initApp después de cargar el script.
-        // Pero como el script sigue ejecutándose, podemos llamar a initApp al final.
-        // Usaremos un setTimeout para asegurar que todo esté listo.
         setTimeout(() => {
             if (typeof initApp === 'function') initApp();
         }, 100);
@@ -286,6 +342,7 @@
     let isLocating = false;
 
     const SPREADSHEET_CSV = 'https://docs.google.com/spreadsheets/d/1aB61V0SkRZlwybEJAV9uQx2g1lSQrXQTVBkT5ILKUSQ/export?format=csv';
+    const TIMEZONE = 'Europe/Berlin'; // Zona horaria de las actividades
 
     // --------------------------------------------------------------
     // PARSER CSV ROBUSTO
@@ -372,10 +429,53 @@
         return new Date(y, m, d);
     }
 
+    // Obtener la hora actual en la zona horaria de Alemania
+    function getCurrentTimeInGermany() {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: TIMEZONE,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+        const parts = formatter.formatToParts(now);
+        const obj = {};
+        parts.forEach(p => { if (p.type !== 'literal') obj[p.type] = parseInt(p.value, 10); });
+        // Crear fecha en UTC con la hora de Alemania
+        const dateObj = new Date(Date.UTC(obj.year, obj.month-1, obj.day, obj.hour, obj.minute, obj.second || 0));
+        return dateObj;
+    }
+
     function getStartHour(str) {
         if (!str) return '00:00';
         const parts = str.split('-');
         return parts[0].trim();
+    }
+
+    function getEndHour(str) {
+        if (!str) return null;
+        if (str.includes('-')) {
+            const parts = str.split('-');
+            return parts[1].trim();
+        }
+        return null; // no es rango
+    }
+
+    // Obtener horario de inicio y fin como minutos desde medianoche (en zona horaria de Alemania)
+    function getTimeRange(horaStr) {
+        const inicio = getStartHour(horaStr);
+        const fin = getEndHour(horaStr);
+        const toMinutes = (h) => {
+            const [hh, mm] = h.split(':').map(Number);
+            return hh * 60 + mm;
+        };
+        const startMin = toMinutes(inicio);
+        const endMin = fin ? toMinutes(fin) : startMin;
+        return { start: startMin, end: endMin };
     }
 
     function sortByNumber(a, b) {
@@ -385,29 +485,112 @@
     }
 
     function findCurrentOrNext(activities) {
-        const now = new Date();
-        for (let i = 0; i < activities.length; i++) {
-            const act = activities[i];
-            const date = parseDate(act.Fecha);
-            if (!date) continue;
-            const d = new Date(date);
-            const startH = getStartHour(act.Hora);
-            const [h, m] = startH.split(':').map(Number);
-            d.setHours(h || 0, m || 0, 0, 0);
-            if (d >= now) return i;
+        if (!activities.length) return null;
+        const nowBerlin = getCurrentTimeInGermany();
+        const today = new Date(nowBerlin);
+        today.setHours(0, 0, 0, 0);
+
+        // Filtrar actividades del día de hoy o futuras (fecha >= hoy)
+        const filtered = activities.filter(act => {
+            const d = parseDate(act.Fecha);
+            return d && d >= today;
+        });
+
+        if (!filtered.length) {
+            // Si no hay actividades hoy o en el futuro, buscar la última actividad
+            const last = activities[activities.length - 1];
+            return { activity: last, index: activities.indexOf(last), type: 'finalizada' };
         }
-        return activities.length - 1;
+
+        // Recorrer en orden y determinar si está en curso o es próxima
+        for (let i = 0; i < filtered.length; i++) {
+            const act = filtered[i];
+            const range = getTimeRange(act.Hora);
+            const actDate = parseDate(act.Fecha);
+            // Comparar solo si es hoy o si es una fecha futura (en ese caso, es próxima)
+            const isToday = actDate.getTime() === today.getTime();
+            const nowMinutes = nowBerlin.getHours() * 60 + nowBerlin.getMinutes();
+
+            if (isToday) {
+                if (nowMinutes >= range.start && nowMinutes <= range.end) {
+                    return { activity: act, index: allActivities.indexOf(act), type: 'actual' };
+                } else if (nowMinutes < range.start) {
+                    return { activity: act, index: allActivities.indexOf(act), type: 'proxima' };
+                }
+                // Si ya pasó, continuar con la siguiente
+            } else {
+                // Fecha futura -> es próxima
+                return { activity: act, index: allActivities.indexOf(act), type: 'proxima' };
+            }
+        }
+
+        // Si todas las actividades de hoy ya pasaron y no hay futuras, mostrar la última del día
+        const lastToday = filtered[filtered.length - 1];
+        return { activity: lastToday, index: allActivities.indexOf(lastToday), type: 'finalizada' };
     }
 
-    const dayColors = [
-        '#4A90D9','#E67E22','#27AE60','#8E44AD','#D35400',
-        '#2C3E50','#16A085','#C0392B','#2980B9','#F39C12',
-        '#1ABC9C','#7F8C8D','#E74C3C','#3498DB','#2ECC71'
-    ];
-    function getDayColor(index) { return dayColors[index % dayColors.length]; }
+    // --------------------------------------------------------------
+    // RENDER: Cuadro de actividad actual/próxima
+    // --------------------------------------------------------------
+    function renderCurrentHighlight(activities) {
+        const container = document.getElementById('currentHighlightContainer');
+        if (!activities.length) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const result = findCurrentOrNext(activities);
+        if (!result) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const { activity, index, type } = result;
+        let labelText = '';
+        let icon = '';
+        let bgColor = '#e6f0ff';
+        let borderColor = '#0066b3';
+        if (type === 'actual') {
+            labelText = '🟢 Actividad en curso';
+            icon = 'fa-play';
+            bgColor = '#e3f2e9';
+            borderColor = '#27ae60';
+        } else if (type === 'proxima') {
+            labelText = '🔵 Próxima actividad';
+            icon = 'fa-clock';
+            bgColor = '#e6f0ff';
+            borderColor = '#0066b3';
+        } else {
+            labelText = '⏳ Actividades finalizadas';
+            icon = 'fa-check-circle';
+            bgColor = '#f0f0f0';
+            borderColor = '#888';
+        }
+
+        const fechaObj = parseDate(activity.Fecha);
+        const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' }) : activity.Fecha;
+        const coords = parseCoords(activity.Coordenadas);
+        const hasCoords = !!coords;
+
+        let html = `
+            <div class="current-highlight" style="background:${bgColor}; border-left-color:${borderColor};">
+                <div class="label"><i class="fas ${icon}"></i> ${labelText}</div>
+                <div class="content">
+                    <div class="top">
+                        <span class="num">#${activity.Num || index+1}</span>
+                        <span class="fecha"><i class="far fa-calendar-alt" style="margin-right:4px;"></i>${fechaStr}</span>
+                        <span class="hora"><i class="far fa-clock"></i> ${activity.Hora || '—'}</span>
+                    </div>
+                    <div class="actividad">${activity.Actividad || 'Sin descripción'}</div>
+                    <div class="lugar"><i class="fas fa-map-pin"></i> ${activity.Lugar || 'Sin lugar'}</div>
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+    }
 
     // --------------------------------------------------------------
-    // RENDER: Agrupado por día con acordeón
+    // RENDER: Actividades agrupadas por día (acordeón)
     // --------------------------------------------------------------
     function renderActivities(activities, highlightIndex) {
         const container = document.getElementById('activityList');
@@ -416,22 +599,23 @@
             return;
         }
 
-        // Agrupar por fecha (día)
+        // Renderizar el cuadro destacado
+        renderCurrentHighlight(activities);
+
+        // Agrupar por fecha
         const dayGroups = {};
         activities.forEach((act, idx) => {
-            const key = act.Fecha; // formato "6/9/2026"
+            const key = act.Fecha;
             if (!dayGroups[key]) dayGroups[key] = [];
             dayGroups[key].push({ act, idx });
         });
 
-        // Obtener lista de días únicos ordenados por fecha
         const uniqueDays = Object.keys(dayGroups).sort((a, b) => {
             const da = parseDate(a);
             const db = parseDate(b);
             return da - db;
         });
 
-        // Asignar colores a cada día (no consecutivos)
         const dayColorMap = {};
         uniqueDays.forEach((day, i) => {
             let color = getDayColor(i);
@@ -442,13 +626,11 @@
             dayColorMap[day] = color;
         });
 
-        // Determinar qué día debe estar abierto (el que contiene highlightIndex)
         let openDay = null;
         if (highlightIndex >= 0 && highlightIndex < activities.length) {
             const act = activities[highlightIndex];
             openDay = act.Fecha;
         }
-        // Si no hay highlight, abrir el primer día
         if (!openDay && uniqueDays.length) openDay = uniqueDays[0];
 
         let html = '';
@@ -492,24 +674,18 @@
 
         container.innerHTML = html;
 
-        // Eventos para los headers (acordeón)
+        // Eventos para headers (acordeón)
         container.querySelectorAll('.day-header').forEach(header => {
             header.addEventListener('click', function(e) {
-                // Evitar que clic en botón interno dispare el toggle
                 if (e.target.closest('.action-btn')) return;
-                const day = this.dataset.day;
                 const items = this.nextElementSibling;
                 const isOpen = items.classList.contains('open');
-
-                // Cerrar todos los demás
                 container.querySelectorAll('.day-items').forEach(el => el.classList.remove('open'));
                 container.querySelectorAll('.day-header').forEach(h => h.classList.remove('open'));
-
                 if (!isOpen) {
                     items.classList.add('open');
                     this.classList.add('open');
                 }
-                // Si ya estaba abierto, se cierra (toggling off)
             });
         });
 
@@ -715,7 +891,6 @@
             selectedDay = date.getDate();
             renderCalendar(allActivities, selectedDay);
         }
-        // Asegurar que el día de esta actividad esté abierto (ya lo hace renderActivities)
     }
 
     // --------------------------------------------------------------
@@ -728,12 +903,10 @@
             return d && d.getDate() === day && d.getMonth() === 8 && d.getFullYear() === 2026;
         });
         if (filtered.length === 0) {
-            // No hay actividades ese día, mostrar todas pero mantener highlight
             renderActivities(allActivities, currentHighlightIndex);
             renderCalendar(allActivities, selectedDay);
             return;
         }
-        // Encontrar la primera actividad de ese día y hacer focus
         const firstIdx = allActivities.indexOf(filtered[0]);
         if (firstIdx >= 0) {
             focusOnActivity(firstIdx);
@@ -777,7 +950,17 @@
                 return;
             }
 
-            const highlightIdx = findCurrentOrNext(allActivities);
+            // Calcular highlight basado en la actividad actual o próxima
+            const result = findCurrentOrNext(allActivities);
+            let highlightIdx = 0;
+            if (result) {
+                // Si la actividad está en curso o es próxima, la resaltamos; si finalizada, resaltamos la última
+                if (result.type === 'finalizada') {
+                    highlightIdx = allActivities.length - 1;
+                } else {
+                    highlightIdx = result.index;
+                }
+            }
             currentHighlightIndex = highlightIdx;
 
             initMap();
@@ -785,8 +968,8 @@
             updateMarkers(allActivities, currentHighlightIndex);
             renderCalendar(allActivities, null);
 
-            if (highlightIdx >= 0) {
-                const act = allActivities[highlightIdx];
+            const act = allActivities[currentHighlightIndex];
+            if (act) {
                 const date = parseDate(act.Fecha);
                 if (date) {
                     selectedDay = date.getDate();
@@ -818,9 +1001,8 @@
         }
     }
 
-    // Si el usuario ya estaba autenticado (auto-login), se ejecuta initApp
+    // Si el usuario ya estaba autenticado (auto-login)
     if (window._autoLogged) {
-        // Esperar a que el DOM esté listo
         if (document.readyState === 'complete' || document.readyState === 'interactive') {
             initApp();
         } else {
