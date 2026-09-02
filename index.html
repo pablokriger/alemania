@@ -9,7 +9,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* (estilos iguales que antes, no cambian) */
+        /* Estilos iguales que antes */
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Roboto,system-ui,sans-serif; }
         body { background:#f5f7fa; color:#1e2a3a; min-height:100vh; display:flex; flex-direction:column; }
         #loginOverlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; transition:opacity 0.4s ease; }
@@ -82,10 +82,13 @@
         <i class="fas fa-plane-departure"></i>
         <h2>Alemania 2026</h2>
         <p>Accede a la agenda de viaje</p>
-        <input type="text" id="loginUser" placeholder="Usuario" value="">
-        <input type="password" id="loginPass" placeholder="Contraseña" value="">
-        <button id="loginBtn">Entrar</button>
-        <div id="loginError" class="login-error">Usuario o contraseña incorrectos</div>
+        <!-- FORMULARIO DE LOGIN -->
+        <form id="loginForm" autocomplete="on">
+            <input type="text" id="loginUser" name="username" placeholder="Usuario" value="" autocomplete="username" required>
+            <input type="password" id="loginPass" name="password" placeholder="Contraseña" value="" autocomplete="current-password" required>
+            <button type="submit" id="loginBtn">Entrar</button>
+            <div id="loginError" class="login-error">Usuario o contraseña incorrectos</div>
+        </form>
     </div>
 </div>
 
@@ -138,18 +141,19 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --------------------------------------------------------------
-    // LOGIN
+    // LOGIN CON FORMULARIO
     // --------------------------------------------------------------
     const validUsers = { 'germany26': 'volga', 'argento': 'volga' };
     const loginOverlay = document.getElementById('loginOverlay');
     const loginUser = document.getElementById('loginUser');
     const loginPass = document.getElementById('loginPass');
-    const loginBtn = document.getElementById('loginBtn');
+    const loginForm = document.getElementById('loginForm');
     const loginError = document.getElementById('loginError');
     const app = document.getElementById('app');
     const userDisplay = document.getElementById('userDisplay');
 
-    function doLogin() {
+    function doLogin(e) {
+        if (e) e.preventDefault(); // Evita recargar la página
         const u = loginUser.value.trim().toLowerCase();
         const p = loginPass.value.trim();
         if (validUsers[u] && validUsers[u] === p) {
@@ -157,20 +161,26 @@
             loginOverlay.classList.add('hidden');
             app.classList.add('active');
             userDisplay.textContent = u;
+            // Iniciar la app
             initApp();
         } else {
             loginError.style.display = 'block';
+            // Para que el navegador no guarde credenciales incorrectas
+            loginForm.reset();
         }
     }
-    loginBtn.addEventListener('click', doLogin);
-    loginPass.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-    loginUser.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+    loginForm.addEventListener('submit', doLogin);
+
+    // Cerrar sesión
     document.getElementById('logoutBtn').addEventListener('click', () => {
         app.classList.remove('active');
         loginOverlay.classList.remove('hidden');
         loginUser.value = '';
         loginPass.value = '';
         loginError.style.display = 'none';
+        // Opcional: resetear el formulario para limpiar estados
+        loginForm.reset();
     });
 
     // --------------------------------------------------------------
@@ -184,7 +194,7 @@
     const SPREADSHEET_CSV = 'https://docs.google.com/spreadsheets/d/1aB61V0SkRZlwybEJAV9uQx2g1lSQrXQTVBkT5ILKUSQ/export?format=csv';
 
     // --------------------------------------------------------------
-    // PARSER CSV ROBUSTO (maneja comillas, saltos de línea internos, comas)
+    // PARSER CSV ROBUSTO
     // --------------------------------------------------------------
     function parseCSV(text) {
         const rows = [];
@@ -198,7 +208,6 @@
             const ch = text[i];
             if (insideQuotes) {
                 if (ch === '"') {
-                    // Si es "" dentro de comillas, es una comilla escapada
                     if (i + 1 < len && text[i + 1] === '"') {
                         currentField += '"';
                         i += 2;
@@ -219,13 +228,11 @@
                     currentField = '';
                     i++;
                 } else if (ch === '\n' || ch === '\r') {
-                    // Saltos de línea: si es \r\n, saltamos ambos
                     if (ch === '\r' && i + 1 < len && text[i + 1] === '\n') {
                         i += 2;
                     } else {
                         i++;
                     }
-                    // Si hay caracteres en el campo actual, agregamos la fila
                     if (currentField.trim() !== '' || currentRow.length > 0) {
                         currentRow.push(currentField.trim());
                         rows.push(currentRow);
@@ -238,7 +245,6 @@
                 }
             }
         }
-        // Último campo
         if (currentField.trim() !== '' || currentRow.length > 0) {
             currentRow.push(currentField.trim());
             rows.push(currentRow);
@@ -462,7 +468,6 @@
             markers.push(marker);
         });
 
-        // Centrar en el destacado
         if (highlightIndex >= 0 && highlightIndex < activities.length) {
             const act = activities[highlightIndex];
             const coords = parseCoords(act.Coordenadas);
@@ -478,7 +483,6 @@
     function focusOnActivity(idx) {
         if (idx < 0 || idx >= allActivities.length) return;
         currentHighlightIndex = idx;
-        // Actualizar marcadores y centrar
         updateMarkers(allActivities, idx);
         renderActivities(allActivities, idx);
         const act = allActivities[idx];
@@ -527,19 +531,16 @@
                 headers.forEach((h, idx) => {
                     obj[h] = (cols[idx] || '').trim();
                 });
-                // Si la fila está vacía, la saltamos
                 if (!obj.Num && !obj.Fecha) continue;
                 data.push(obj);
             }
 
-            // Limpiar posibles comillas sobrantes
             data.forEach(row => {
                 Object.keys(row).forEach(k => {
                     row[k] = row[k].replace(/^"|"$/g, '').trim();
                 });
             });
 
-            // Filtrar por número y fecha
             const filtered = data.filter(row => row.Num && row.Fecha);
             filtered.sort(sortByNumber);
             allActivities = filtered;
