@@ -1,1 +1,600 @@
-1
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AlemanyTour26 - Guía de viaje</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Roboto,system-ui,sans-serif; }
+        body { background:#f5f7fa; color:#1e2a3a; min-height:100vh; display:flex; flex-direction:column; }
+
+        /* ----- LOGIN OVERLAY (solo usuario) ----- */
+        #loginOverlay {
+            position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px);
+            display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;
+            transition:opacity 0.4s ease;
+        }
+        #loginOverlay.hidden { opacity:0; pointer-events:none; }
+        .login-card {
+            background:white; border-radius:32px; padding:40px 30px; max-width:380px; width:100%;
+            box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center;
+        }
+        .login-card i { font-size:48px; color:#0066b3; margin-bottom:10px; }
+        .login-card h2 { font-weight:300; font-size:24px; margin-bottom:6px; }
+        .login-card p { color:#666; margin-bottom:24px; font-size:14px; }
+        .login-card input {
+            width:100%; padding:14px 16px; margin-bottom:14px; border:1px solid #ddd;
+            border-radius:40px; font-size:16px; outline:none; transition:0.2s;
+        }
+        .login-card input:focus { border-color:#0066b3; box-shadow:0 0 0 3px rgba(0,102,179,0.15); }
+        .login-card button {
+            width:100%; padding:14px; background:#0066b3; color:white; border:none;
+            border-radius:40px; font-size:18px; font-weight:600; cursor:pointer; transition:0.2s;
+        }
+        .login-card button:hover { background:#004d8a; }
+        .login-error { color:#c0392b; font-size:14px; margin-top:12px; display:none; }
+
+        /* ----- APP ----- */
+        #app { display:none; flex-direction:column; min-height:100vh; }
+        #app.active { display:flex; }
+
+        /* HEADER */
+        .header {
+            background:linear-gradient(135deg,#001f3f,#003366); color:white;
+            padding:16px 20px; display:flex; align-items:center; justify-content:space-between;
+            flex-wrap:wrap; box-shadow:0 2px 12px rgba(0,0,0,0.2); position:sticky; top:0; z-index:100;
+        }
+        .header-left { display:flex; align-items:center; gap:12px; }
+        .header-left i { font-size:28px; color:#ffd700; }
+        .header-left h1 { font-size:20px; font-weight:400; letter-spacing:0.5px; }
+        .header-left h1 span { font-weight:700; }
+
+        .header-center { display:flex; align-items:center; gap:12px; }
+        .header-center .mode-label { font-size:13px; font-weight:500; color:rgba(255,255,255,0.7); transition:0.3s; }
+        .header-center .mode-label.active { color:white; }
+
+        /* Toggle switch */
+        .switch { position:relative; display:inline-block; width:60px; height:30px; flex-shrink:0; }
+        .switch input { opacity:0; width:0; height:0; }
+        .slider {
+            position:absolute; cursor:pointer; inset:0; background:#ccc;
+            transition:0.4s; border-radius:30px;
+        }
+        .slider:before {
+            content:""; position:absolute; height:22px; width:22px; left:4px; bottom:4px;
+            background:white; transition:0.4s; border-radius:50%;
+        }
+        input:checked + .slider { background:#2196F3; }
+        input:checked + .slider:before { transform:translateX(30px); }
+
+        .header-right { display:flex; align-items:center; gap:16px; font-size:14px; }
+        .header-right i { cursor:pointer; opacity:0.8; transition:0.2s; }
+        .header-right i:hover { opacity:1; }
+
+        /* CONTENT */
+        .content { flex:1; padding:16px 16px 10px; display:flex; flex-direction:column; gap:20px; max-width:1200px; margin:0 auto; width:100%; }
+
+        /* LISTA CON DESPLEGABLES POR CIUDAD */
+        .list-section {
+            background:white; border-radius:24px; box-shadow:0 8px 30px rgba(0,0,0,0.08);
+            overflow:hidden; padding:16px 0;
+        }
+        .list-title {
+            padding:0 20px 12px; font-size:18px; font-weight:600;
+            display:flex; justify-content:space-between; align-items:center;
+            border-bottom:1px solid #eee;
+        }
+        .list-title small { font-weight:400; font-size:14px; color:#666; }
+
+        .list-container { padding:8px 12px 12px; }
+
+        /* Ciudad - cabecera desplegable */
+        .city-group { margin-bottom:12px; border-radius:16px; overflow:hidden; border:1px solid #e9edf2; }
+        .city-header {
+            background:#f8faff; padding:14px 18px; cursor:pointer; display:flex;
+            justify-content:space-between; align-items:center; font-weight:600; font-size:17px;
+            transition:0.2s; user-select:none;
+            border-left:6px solid #0066b3;
+        }
+        .city-header:hover { background:#eef4fa; }
+        .city-header i { transition:0.3s; }
+        .city-header .fa-chevron-down { transform:rotate(0deg); }
+        .city-header.open .fa-chevron-down { transform:rotate(180deg); }
+
+        .city-items { max-height:0; overflow:hidden; transition:max-height 0.4s ease; background:white; }
+        .city-items.open { max-height:2000px; }
+
+        /* Actividad (lugar) dentro de ciudad */
+        .place-item {
+            display:flex; flex-direction:column; padding:14px 18px;
+            border-top:1px solid #f0f2f5; background:#fafbfc;
+            cursor:pointer; transition:0.2s;
+        }
+        .place-item:last-child { border-bottom:none; }
+        .place-item:hover { background:#f0f5fc; }
+        .place-item.highlight { background:#e6f0ff; border-left:4px solid #0066b3; }
+
+        .place-item .top-row {
+            display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; margin-bottom:4px;
+        }
+        .place-item .nombre { font-weight:600; font-size:16px; color:#0b1e33; }
+        .place-item .descripcion { font-size:14px; color:#333; margin:4px 0; line-height:1.5; }
+        .place-item .direccion { font-size:13px; color:#555; display:flex; align-items:center; gap:6px; }
+        .place-item .direccion i { color:#888; font-size:13px; }
+        .place-item .extra { font-size:13px; color:#777; margin-top:4px; font-style:italic; }
+        .place-item .action-btn {
+            align-self:flex-start; margin-top:8px; background:none; border:none;
+            color:#0066b3; font-size:13px; cursor:pointer; display:flex; align-items:center;
+            gap:4px; padding:4px 12px; border-radius:20px; background:#eef3fa; transition:0.2s;
+        }
+        .place-item .action-btn:hover { background:#d4e2f0; }
+
+        /* MAPA */
+        .map-section {
+            background:white; border-radius:24px; box-shadow:0 8px 30px rgba(0,0,0,0.08);
+            overflow:hidden; padding:8px; position:relative;
+        }
+        #map { height:300px; width:100%; border-radius:16px; z-index:1; }
+
+        /* FOOTER */
+        .footer {
+            background:#001f3f; color:#b0c4de; text-align:center;
+            padding:18px 16px; font-size:14px; letter-spacing:0.3px;
+            border-top:1px solid #003366; margin-top:auto;
+        }
+
+        /* Botón ubicación */
+        .locate-btn {
+            position:absolute; bottom:30px; right:20px; z-index:1000;
+            background:white; border:none; border-radius:50%; width:44px; height:44px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.25); font-size:20px; color:#0066b3;
+            cursor:pointer; transition:0.2s; display:flex; align-items:center; justify-content:center;
+        }
+        .locate-btn:hover { background:#f0f4fa; transform:scale(1.05); }
+        .locate-btn:active { transform:scale(0.95); }
+        .locate-btn.loading { animation:pulse 1.2s infinite; }
+        @keyframes pulse {
+            0% { box-shadow:0 0 0 0 rgba(0,102,179,0.4); }
+            70% { box-shadow:0 0 0 10px rgba(0,102,179,0); }
+            100% { box-shadow:0 0 0 0 rgba(0,102,179,0); }
+        }
+
+        /* RESPONSIVE */
+        @media (min-width:768px) {
+            .content { padding:24px 32px; }
+            #map { height:400px; }
+            .header-left h1 { font-size:26px; }
+        }
+        @media (max-width:480px) {
+            .header-left h1 { font-size:16px; }
+            .header-right { font-size:12px; }
+            .header-center .mode-label { font-size:11px; }
+            .switch { width:50px; height:26px; }
+            .slider:before { height:18px; width:18px; left:4px; bottom:4px; }
+            input:checked + .slider:before { transform:translateX(24px); }
+            .place-item .nombre { font-size:15px; }
+            .place-item .descripcion { font-size:13px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN OVERLAY -->
+<div id="loginOverlay">
+    <div class="login-card">
+        <i class="fas fa-map-signs"></i>
+        <h2>AlemanyTour26</h2>
+        <p>Accede a la guía de lugares</p>
+        <form id="loginForm" autocomplete="on">
+            <input type="text" id="loginUser" name="username" placeholder="Usuario" value="" autocomplete="username">
+            <button type="submit" id="loginBtn">Entrar</button>
+        </form>
+        <div id="loginError" class="login-error">Usuario no válido</div>
+    </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div id="app">
+    <header class="header">
+        <div class="header-left">
+            <i class="fas fa-compass"></i>
+            <h1><span>Alemany</span>Tour26</h1>
+        </div>
+        <div class="header-center">
+            <span class="mode-label" id="labelInstitucional">Institucional</span>
+            <label class="switch">
+                <input type="checkbox" id="modeSwitch" checked>
+                <span class="slider"></span>
+            </label>
+            <span class="mode-label active" id="labelTour">Tour</span>
+        </div>
+        <div class="header-right">
+            <i class="fas fa-user-circle" style="font-size:20px;"></i>
+            <span id="userDisplay">huber</span>
+            <i class="fas fa-sign-out-alt" id="logoutBtn" style="font-size:18px;"></i>
+        </div>
+    </header>
+
+    <div class="content">
+        <!-- LISTA DE LUGARES POR CIUDAD -->
+        <section class="list-section">
+            <div class="list-title">
+                <span><i class="fas fa-map-pin" style="margin-right:8px;"></i>Lugares para visitar</span>
+                <small id="placeCounter">0</small>
+            </div>
+            <div class="list-container" id="placeList">
+                <div style="text-align:center;padding:40px 0;color:#999;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:28px;"></i>
+                    <p style="margin-top:12px;">Cargando lugares...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- MAPA -->
+        <section class="map-section">
+            <div id="map"></div>
+            <button id="locateBtn" class="locate-btn" title="Mi ubicación">
+                <i class="fas fa-location-arrow"></i>
+            </button>
+        </section>
+    </div>
+
+    <footer class="footer">
+        (c) Pablo Kriger - Todos los derechos reservados.
+    </footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // --------------------------------------------------------------
+    // 1. LOGIN (solo usuario)
+    // --------------------------------------------------------------
+    const validUsers = ['huber', 'kriger', 'sakerment'];
+    const loginOverlay = document.getElementById('loginOverlay');
+    const loginUser = document.getElementById('loginUser');
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const app = document.getElementById('app');
+    const userDisplay = document.getElementById('userDisplay');
+
+    function doLogin(e) {
+        if (e) e.preventDefault();
+        const u = loginUser.value.trim().toLowerCase();
+        if (validUsers.includes(u)) {
+            loginError.style.display = 'none';
+            loginOverlay.classList.add('hidden');
+            app.classList.add('active');
+            userDisplay.textContent = u;
+            initApp();
+        } else {
+            loginError.style.display = 'block';
+        }
+    }
+    loginForm.addEventListener('submit', doLogin);
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        app.classList.remove('active');
+        loginOverlay.classList.remove('hidden');
+        loginUser.value = '';
+        loginError.style.display = 'none';
+    });
+
+    // --------------------------------------------------------------
+    // 2. SWITCH DE MODO (por defecto a la derecha = Tour)
+    // --------------------------------------------------------------
+    const modeSwitch = document.getElementById('modeSwitch');
+    const labelInst = document.getElementById('labelInstitucional');
+    const labelTour = document.getElementById('labelTour');
+
+    // Por defecto: modo Tour activado (checked=true)
+    modeSwitch.checked = true;
+    labelInst.classList.remove('active');
+    labelTour.classList.add('active');
+
+    modeSwitch.addEventListener('change', function() {
+        if (this.checked) {
+            // Modo Tour (ya estamos aquí)
+            // Si ya estamos en Tour, no hacemos nada
+        } else {
+            // Modo Institucional → redirigir a la página principal
+            window.location.href = 'https://pablokriger.github.io/alemania/';
+        }
+    });
+
+    // --------------------------------------------------------------
+    // 3. DATOS DE LUGARES (EMBEBIDOS)
+    // --------------------------------------------------------------
+    // Estructura: Dirección, Ciudad, Lugar, Descripción, Coordenadas, Extra
+    const lugaresData = [
+        {
+            Direccion: "Pariser Platz, 10117 Berlin, Alemania",
+            Ciudad: "Berlín",
+            Lugar: "Puerta de Brandeburgo",
+            Descripcion: "Puerta del s. XVIII restaurada con 12 columnas dóricas coronadas por una estatua de diosa clásica.",
+            Coordenadas: "52.516280 N, 13.377700 E",
+            Extra: "Ya fui"
+        },
+        {
+            Direccion: "Platz der Republik 1, 11011 Berlin, Alemania",
+            Ciudad: "Berlín",
+            Lugar: "Edificio del Reichstag",
+            Descripcion: "Edificio parlamentario neorrenacentista con una cúpula de cristal de Norman Foster y vistas panorámicas.",
+            Coordenadas: "52.518611 N, 13.376111 E",
+            Extra: "Volveré"
+        }
+    ];
+
+    // --------------------------------------------------------------
+    // 4. UTILIDADES
+    // --------------------------------------------------------------
+    function parseCoords(str) {
+        if (!str) return null;
+        const parts = str.split(',').map(s => s.trim());
+        if (parts.length !== 2) return null;
+        const latMatch = parts[0].match(/([\d.]+)\s*([NS])/i);
+        const lngMatch = parts[1].match(/([\d.]+)\s*([EW])/i);
+        if (!latMatch || !lngMatch) return null;
+        let lat = parseFloat(latMatch[1]);
+        let lng = parseFloat(lngMatch[1]);
+        if (latMatch[2].toUpperCase() === 'S') lat = -lat;
+        if (lngMatch[2].toUpperCase() === 'W') lng = -lng;
+        return { lat, lng };
+    }
+
+    // Agrupar por ciudad
+    function groupByCity(data) {
+        const groups = {};
+        data.forEach(item => {
+            const city = item.Ciudad || 'Sin ciudad';
+            if (!groups[city]) groups[city] = [];
+            groups[city].push(item);
+        });
+        return groups;
+    }
+
+    // --------------------------------------------------------------
+    // 5. RENDERIZADO DE LISTA CON DESPLEGABLES
+    // --------------------------------------------------------------
+    function renderPlaces(data, highlightIndex) {
+        const container = document.getElementById('placeList');
+        if (!data.length) {
+            container.innerHTML = `<div style="text-align:center;padding:30px 0;color:#999;">No hay lugares para mostrar</div>`;
+            return;
+        }
+
+        const groups = groupByCity(data);
+        const cityNames = Object.keys(groups);
+        let html = '';
+        let globalIdx = 0;
+
+        cityNames.forEach((city, ci) => {
+            const places = groups[city];
+            const color = ['#0066b3', '#e67e22', '#27ae60', '#8e44ad', '#d35400'][ci % 5];
+            const isOpen = (ci === 0); // Abrir la primera ciudad por defecto
+
+            html += `<div class="city-group">`;
+            html += `
+                <div class="city-header ${isOpen ? 'open' : ''}" style="border-left-color:${color};" data-city="${city}">
+                    <span><i class="fas fa-city" style="margin-right:8px;color:${color};"></i>${city} (${places.length})</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            `;
+            html += `<div class="city-items ${isOpen ? 'open' : ''}">`;
+
+            places.forEach((place, idx) => {
+                const isHighlight = (globalIdx === highlightIndex);
+                const coords = parseCoords(place.Coordenadas);
+                const hasCoords = !!coords;
+
+                html += `
+                    <div class="place-item ${isHighlight ? 'highlight' : ''}" data-index="${globalIdx}">
+                        <div class="top-row">
+                            <span class="nombre"><i class="fas fa-map-marker-alt" style="color:${color};margin-right:6px;"></i>${place.Lugar || 'Sin nombre'}</span>
+                        </div>
+                        <div class="descripcion">${place.Descripcion || ''}</div>
+                        <div class="direccion"><i class="fas fa-address-card"></i> ${place.Direccion || ''}</div>
+                        ${place.Extra ? `<div class="extra"><i class="fas fa-tag"></i> ${place.Extra}</div>` : ''}
+                        ${hasCoords ? `<button class="action-btn" data-idx="${globalIdx}"><i class="fas fa-crosshairs"></i> Ver en mapa</button>` : ''}
+                    </div>
+                `;
+                globalIdx++;
+            });
+
+            html += `</div>`; // city-items
+            html += `</div>`; // city-group
+        });
+
+        container.innerHTML = html;
+
+        // Eventos de toggle para ciudad
+        container.querySelectorAll('.city-header').forEach(header => {
+            header.addEventListener('click', function(e) {
+                // Evitar que el clic en el botón interno dispare el toggle
+                if (e.target.closest('.action-btn')) return;
+                const items = this.nextElementSibling;
+                const isOpen = items.classList.contains('open');
+                if (isOpen) {
+                    items.classList.remove('open');
+                    this.classList.remove('open');
+                } else {
+                    items.classList.add('open');
+                    this.classList.add('open');
+                }
+            });
+        });
+
+        // Eventos: clic en lugar → centrar mapa
+        container.querySelectorAll('.place-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.action-btn')) return;
+                const idx = parseInt(item.dataset.index, 10);
+                focusOnPlace(idx);
+            });
+        });
+
+        // Eventos: botón "Ver en mapa"
+        container.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(btn.dataset.idx, 10);
+                focusOnPlace(idx);
+            });
+        });
+
+        // Contador
+        document.getElementById('placeCounter').textContent = `${data.length} lugares`;
+    }
+
+    // --------------------------------------------------------------
+    // 6. MAPA Y GEOLOCALIZACIÓN
+    // --------------------------------------------------------------
+    let map = null;
+    let markers = [];
+    let allPlaces = [];
+    let currentHighlightIndex = -1;
+    let userLocationMarker = null;
+    let userLocationCircle = null;
+    let isLocating = false;
+
+    function initMap() {
+        if (map) return;
+        map = L.map('map').setView([52.52, 13.40], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+        document.getElementById('locateBtn').addEventListener('click', locateUser);
+    }
+
+    function locateUser() {
+        if (!map || isLocating) return;
+        const btn = document.getElementById('locateBtn');
+        btn.classList.add('loading');
+
+        if (!navigator.geolocation) {
+            alert('Tu navegador no soporta geolocalización.');
+            btn.classList.remove('loading');
+            return;
+        }
+
+        isLocating = true;
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                const accuracy = pos.coords.accuracy;
+
+                if (userLocationMarker) { map.removeLayer(userLocationMarker); userLocationMarker = null; }
+                if (userLocationCircle) { map.removeLayer(userLocationCircle); userLocationCircle = null; }
+
+                const icon = L.divIcon({
+                    className: 'user-location-icon',
+                    html: '<i class="fas fa-circle" style="color:#0066b3;font-size:22px;text-shadow:0 0 8px rgba(0,102,179,0.5);"></i>',
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11]
+                });
+                userLocationMarker = L.marker([lat, lng], { icon }).addTo(map);
+                userLocationMarker.bindPopup('📍 Tu ubicación actual');
+
+                if (accuracy) {
+                    userLocationCircle = L.circle([lat, lng], {
+                        radius: accuracy,
+                        color: '#0066b3',
+                        fillColor: '#0066b3',
+                        fillOpacity: 0.1,
+                        weight: 2,
+                        opacity: 0.5
+                    }).addTo(map);
+                }
+
+                map.setView([lat, lng], 14);
+                btn.classList.remove('loading');
+                isLocating = false;
+            },
+            (err) => {
+                console.warn('Error de geolocalización:', err.message);
+                alert('No se pudo obtener tu ubicación. Verifica los permisos.');
+                btn.classList.remove('loading');
+                isLocating = false;
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
+    }
+
+    function updateMarkers(places, highlightIndex) {
+        if (!map) return;
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
+        places.forEach((place, idx) => {
+            const coords = parseCoords(place.Coordenadas);
+            if (!coords) return;
+            const marker = L.marker([coords.lat, coords.lng], {
+                title: place.Lugar || 'Lugar'
+            }).addTo(map);
+            const popupContent = `
+                <strong>${place.Lugar || 'Lugar'}</strong><br>
+                ${place.Descripcion || ''}<br>
+                <i class="fas fa-map-pin"></i> ${place.Direccion || ''}
+                ${place.Extra ? `<br><i class="fas fa-tag"></i> ${place.Extra}` : ''}
+            `;
+            marker.bindPopup(popupContent);
+            marker.on('click', () => {
+                map.setView([coords.lat, coords.lng], 14);
+                marker.openPopup();
+            });
+            markers.push(marker);
+        });
+
+        if (highlightIndex >= 0 && highlightIndex < places.length) {
+            const place = places[highlightIndex];
+            const coords = parseCoords(place.Coordenadas);
+            if (coords) {
+                map.setView([coords.lat, coords.lng], 14);
+                if (markers[highlightIndex]) {
+                    markers[highlightIndex].openPopup();
+                }
+            }
+        }
+    }
+
+    function focusOnPlace(idx) {
+        if (idx < 0 || idx >= allPlaces.length) return;
+        currentHighlightIndex = idx;
+        updateMarkers(allPlaces, idx);
+        renderPlaces(allPlaces, idx);
+        // Scroll al elemento destacado (opcional)
+        const items = document.querySelectorAll('.place-item');
+        if (items[idx]) {
+            items[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+    }
+
+    // --------------------------------------------------------------
+    // 7. INICIALIZACIÓN
+    // --------------------------------------------------------------
+    function initApp() {
+        allPlaces = lugaresData;
+        if (allPlaces.length === 0) {
+            document.getElementById('placeList').innerHTML = `<div style="text-align:center;padding:30px 0;color:#999;">No hay lugares para mostrar</div>`;
+            return;
+        }
+
+        initMap();
+        renderPlaces(allPlaces, 0);
+        updateMarkers(allPlaces, 0);
+
+        // Geolocalización automática (una vez)
+        setTimeout(() => {
+            if (map && navigator.geolocation) locateUser();
+        }, 1000);
+    }
+
+    window.addEventListener('resize', () => {
+        if (map) setTimeout(() => map.invalidateSize(), 200);
+    });
+</script>
+</body>
+</html>
