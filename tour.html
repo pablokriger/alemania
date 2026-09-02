@@ -238,7 +238,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // ==============================================================
-    // 1. LOGIN (solo usuario)
+    // 1. LOGIN CON MEMORIA (localStorage)
     // ==============================================================
     const validUsers = ['huber', 'kriger', 'sakerment'];
     const loginOverlay = document.getElementById('loginOverlay');
@@ -248,11 +248,26 @@
     const app = document.getElementById('app');
     const userDisplay = document.getElementById('userDisplay');
 
+    // Comprobar si hay usuario guardado
+    const savedUser = localStorage.getItem('loggedUserTour');
+    if (savedUser && validUsers.includes(savedUser)) {
+        // Saltar login
+        loginOverlay.classList.add('hidden');
+        app.classList.add('active');
+        userDisplay.textContent = savedUser;
+        // Inicializar app automáticamente
+        window._autoLogged = true;
+        setTimeout(() => {
+            if (typeof initApp === 'function') initApp();
+        }, 100);
+    }
+
     function doLogin(e) {
         if (e) e.preventDefault();
         const u = loginUser.value.trim().toLowerCase();
         if (validUsers.includes(u)) {
             loginError.style.display = 'none';
+            localStorage.setItem('loggedUserTour', u);
             loginOverlay.classList.add('hidden');
             app.classList.add('active');
             userDisplay.textContent = u;
@@ -261,12 +276,18 @@
             loginError.style.display = 'block';
         }
     }
+
     loginForm.addEventListener('submit', doLogin);
+
+    // Logout: eliminar memoria y mostrar login
     document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.removeItem('loggedUserTour');
         app.classList.remove('active');
         loginOverlay.classList.remove('hidden');
         loginUser.value = '';
         loginError.style.display = 'none';
+        // Opcional: recargar la página para resetear el estado
+        // window.location.reload();
     });
 
     // ==============================================================
@@ -606,21 +627,18 @@
             if (rows.length < 2) throw new Error('La hoja está vacía o no tiene cabeceras');
 
             const headers = rows[0].map(h => h.trim());
-            // Mapear columnas: Dirección, Ciudad, Lugar, Descripción, Coordenadas, Extra
             const data = [];
             for (let i = 1; i < rows.length; i++) {
                 const cols = rows[i];
-                if (cols.length < 5) continue; // mínimo 5 columnas
+                if (cols.length < 5) continue;
                 const obj = {};
                 headers.forEach((h, idx) => {
                     obj[h] = (cols[idx] || '').trim();
                 });
-                // Verificar que tenga al menos Lugar y Coordenadas
                 if (!obj.Lugar && !obj.Coordenadas) continue;
                 data.push(obj);
             }
 
-            // Limpiar comillas sobrantes
             data.forEach(row => {
                 Object.keys(row).forEach(k => {
                     row[k] = row[k].replace(/^"|"$/g, '').trim();
@@ -667,6 +685,15 @@
         } else {
             renderPlaces(allPlaces, currentHighlightIndex);
             updateMarkers(allPlaces, currentHighlightIndex);
+        }
+    }
+
+    // Si el usuario ya estaba autenticado (auto-login)
+    if (window._autoLogged) {
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            initApp();
+        } else {
+            document.addEventListener('DOMContentLoaded', initApp);
         }
     }
 
