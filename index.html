@@ -217,7 +217,7 @@
             background: #fafbfc;
             border-left: 6px solid #ccc;
             transition: all 0.25s ease;
-            cursor: default;
+            cursor: pointer;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             position: relative;
         }
@@ -462,8 +462,8 @@
         <i class="fas fa-plane-departure"></i>
         <h2>Alemania 2026</h2>
         <p>Accede a la agenda de viaje</p>
-        <input type="text" id="loginUser" placeholder="Usuario" value="germany26">
-        <input type="password" id="loginPass" placeholder="Contraseña" value="volga">
+        <input type="text" id="loginUser" placeholder="Usuario" value="">
+        <input type="password" id="loginPass" placeholder="Contraseña" value="">
         <button id="loginBtn">Entrar</button>
         <div id="loginError" class="login-error">Usuario o contraseña incorrectos</div>
     </div>
@@ -626,27 +626,21 @@
         return parts[0].trim();
     }
 
-    // Comparar por fecha y hora de inicio
-    function sortByDateTime(a, b) {
-        const da = parseDate(a.Fecha);
-        const db = parseDate(b.Fecha);
-        if (!da || !db) return 0;
-        if (da.getTime() !== db.getTime()) return da.getTime() - db.getTime();
-        const ha = getStartHour(a.Hora);
-        const hb = getStartHour(b.Hora);
-        return ha.localeCompare(hb);
+    // ORDEN POR NÚMERO (columna Num)
+    function sortByNumber(a, b) {
+        const numA = parseInt(a.Num, 10) || 0;
+        const numB = parseInt(b.Num, 10) || 0;
+        return numA - numB;
     }
 
-    // Obtener actividad actual o próxima
+    // Obtener actividad actual o próxima (basado en fecha/hora)
     function findCurrentOrNext(activities) {
         const now = new Date();
-        // Buscar la primera que no haya pasado (fecha > hoy, o misma fecha y hora >= ahora)
         for (let i = 0; i < activities.length; i++) {
             const act = activities[i];
             const date = parseDate(act.Fecha);
             if (!date) continue;
             const d = new Date(date);
-            // Ajustar hora de inicio
             const startH = getStartHour(act.Hora);
             const [h, m] = startH.split(':').map(Number);
             d.setHours(h || 0, m || 0, 0, 0);
@@ -654,7 +648,6 @@
                 return i;
             }
         }
-        // Si todas pasaron, devolver la última (más reciente)
         return activities.length - 1;
     }
 
@@ -676,16 +669,13 @@
             dayGroups[dateKey].push(idx);
         });
         const uniqueDays = Object.keys(dayGroups);
-        // Asignar color a cada día (no consecutivo)
         const dayColorMap = {};
         uniqueDays.forEach((day, i) => {
             let color = getDayColor(i);
-            // Asegurar que no sea igual al anterior
             if (i > 0) {
                 const prevDay = uniqueDays[i-1];
                 const prevColor = dayColorMap[prevDay];
                 if (prevColor === color) {
-                    // cambiar al siguiente de la paleta
                     const idx = dayColors.indexOf(color);
                     const nextIdx = (idx + 1) % dayColors.length;
                     color = dayColors[nextIdx];
@@ -722,9 +712,20 @@
 
         container.innerHTML = html;
 
+        // Evento de clic en toda la tarjeta (delegación)
+        container.querySelectorAll('.activity-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                // Si el clic fue en el botón, no hacemos nada aquí (el botón tiene su propio listener)
+                if (e.target.closest('.action-btn')) return;
+                const idx = parseInt(item.dataset.index, 10);
+                focusOnActivity(idx);
+            });
+        });
+
         // Eventos para botones "Ver en mapa"
         container.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Evita que el clic en el botón dispare también el de la tarjeta
                 const idx = parseInt(btn.dataset.idx, 10);
                 focusOnActivity(idx);
             });
@@ -744,20 +745,17 @@
 
     function renderCalendar(activities, selectedDayNum) {
         const grid = document.getElementById('calendarGrid');
-        // Cabecera de días
         const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
         let html = '';
         dayNames.forEach(name => {
             html += `<div class="day-name">${name}</div>`;
         });
 
-        // Septiembre 2026
         const year = 2026;
-        const month = 8; // 0-index: septiembre = 8
-        const firstDay = new Date(year, month, 1).getDay(); // 0=Dom
+        const month = 8; // septiembre
+        const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-        // Obtener días con actividades
         const activityDays = new Set();
         activities.forEach(act => {
             const d = parseDate(act.Fecha);
@@ -766,11 +764,9 @@
             }
         });
 
-        // Día actual
         const today = new Date();
         const todayDate = (today.getFullYear() === year && today.getMonth() === month) ? today.getDate() : -1;
 
-        // Espacios en blanco antes del día 1
         for (let i = 0; i < firstDay; i++) {
             html += `<div class="day-cell empty"></div>`;
         }
@@ -788,7 +784,6 @@
 
         grid.innerHTML = html;
 
-        // Eventos click en días
         grid.querySelectorAll('.day-cell:not(.empty)').forEach(cell => {
             cell.addEventListener('click', () => {
                 const day = parseInt(cell.dataset.day, 10);
@@ -810,7 +805,6 @@
 
     function updateMarkers(activities, highlightIndex) {
         if (!map) return;
-        // Limpiar marcadores anteriores
         markers.forEach(m => map.removeLayer(m));
         markers = [];
 
@@ -820,7 +814,6 @@
             const marker = L.marker([coords.lat, coords.lng], {
                 title: act.Actividad || 'Actividad'
             }).addTo(map);
-            // Popup
             const fecha = act.Fecha;
             const lugar = act.Lugar || '';
             const popupContent = `<strong>${act.Actividad || 'Actividad'}</strong><br>${fecha} ${act.Hora || ''}<br>${lugar}`;
@@ -832,13 +825,11 @@
             markers.push(marker);
         });
 
-        // Si hay highlight, centrar en ese
         if (highlightIndex >= 0 && highlightIndex < activities.length) {
             const act = activities[highlightIndex];
             const coords = parseCoords(act.Coordenadas);
             if (coords) {
                 map.setView([coords.lat, coords.lng], 13);
-                // Abrir popup del marcador correspondiente
                 if (markers[highlightIndex]) {
                     markers[highlightIndex].openPopup();
                 }
@@ -850,15 +841,18 @@
         if (!map || idx < 0 || idx >= allActivities.length) return;
         const act = allActivities[idx];
         const coords = parseCoords(act.Coordenadas);
-        if (!coords) return;
+        if (!coords) {
+            // Si no tiene coordenadas, igual resaltamos pero no movemos el mapa
+            currentHighlightIndex = idx;
+            renderActivities(allActivities, currentHighlightIndex);
+            return;
+        }
         map.setView([coords.lat, coords.lng], 13);
         if (markers[idx]) {
             markers[idx].openPopup();
         }
-        // Resaltar en lista
         currentHighlightIndex = idx;
         renderActivities(allActivities, currentHighlightIndex);
-        // Actualizar calendario (seleccionar día)
         const date = parseDate(act.Fecha);
         if (date) {
             selectedDay = date.getDate();
@@ -871,18 +865,15 @@
     // --------------------------------------------------------------
     function filterByDay(day) {
         selectedDay = day;
-        // Buscar primera actividad de ese día
         const filtered = allActivities.filter(act => {
             const d = parseDate(act.Fecha);
             return d && d.getDate() === day && d.getMonth() === 8 && d.getFullYear() === 2026;
         });
         if (filtered.length === 0) {
-            // No hay actividades ese día, mostrar todas y mantener highlight actual
             renderActivities(allActivities, currentHighlightIndex);
             renderCalendar(allActivities, selectedDay);
             return;
         }
-        // Encontrar índice de la primera actividad de ese día en allActivities
         const firstIdx = allActivities.indexOf(filtered[0]);
         if (firstIdx >= 0) {
             currentHighlightIndex = firstIdx;
@@ -902,7 +893,6 @@
             const rows = csvText.split('\n').filter(row => row.trim() !== '');
             if (rows.length < 2) throw new Error('Datos insuficientes');
 
-            // Cabeceras: Num,Fecha,Hora,Actividad,Lugar,Coordenadas
             const headers = rows[0].split(',').map(h => h.trim());
             const data = [];
             for (let i = 1; i < rows.length; i++) {
@@ -912,17 +902,15 @@
                 headers.forEach((h, idx) => {
                     obj[h] = cols[idx] || '';
                 });
-                // Limpiar posibles comillas
                 Object.keys(obj).forEach(key => {
                     obj[key] = obj[key].replace(/^"|"$/g, '').trim();
                 });
                 data.push(obj);
             }
 
-            // Filtrar filas sin número o fecha
             const filtered = data.filter(row => row.Num && row.Fecha);
-            // Ordenar
-            filtered.sort(sortByDateTime);
+            // ORDENAR POR NÚMERO
+            filtered.sort(sortByNumber);
 
             allActivities = filtered;
 
@@ -931,19 +919,14 @@
                 return;
             }
 
-            // Determinar actividad actual
             const highlightIdx = findCurrentOrNext(allActivities);
             currentHighlightIndex = highlightIdx;
 
-            // Inicializar mapa
             initMap();
-
-            // Renderizar
             renderActivities(allActivities, currentHighlightIndex);
             updateMarkers(allActivities, currentHighlightIndex);
             renderCalendar(allActivities, null);
 
-            // Si hay highlight, seleccionar su día en el calendario
             if (highlightIdx >= 0) {
                 const act = allActivities[highlightIdx];
                 const date = parseDate(act.Fecha);
@@ -966,26 +949,20 @@
     }
 
     function initApp() {
-        // Si ya se cargaron datos, no volver a cargar
         if (allActivities.length === 0) {
             loadData();
         } else {
-            // Re-renderizar con los mismos datos
             renderActivities(allActivities, currentHighlightIndex);
             updateMarkers(allActivities, currentHighlightIndex);
             renderCalendar(allActivities, selectedDay);
         }
     }
 
-    // Para que el mapa se ajuste al contenedor al mostrarse
     window.addEventListener('resize', () => {
         if (map) {
             setTimeout(() => map.invalidateSize(), 200);
         }
     });
-
-    // Inicialización automática al hacer login (se llama desde doLogin)
-    // Pero initApp se llama después del login exitoso.
 </script>
 </body>
 </html>
