@@ -9,7 +9,6 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* (estilos iguales, añadimos algunos para el botón de ubicación) */
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Roboto,system-ui,sans-serif; }
         body { background:#f5f7fa; color:#1e2a3a; min-height:100vh; display:flex; flex-direction:column; }
         #loginOverlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; transition:opacity 0.4s ease; }
@@ -30,6 +29,16 @@
         .header-left i { font-size:28px; color:#ffd700; }
         .header-left h1 { font-size:20px; font-weight:400; letter-spacing:0.5px; }
         .header-left h1 span { font-weight:700; }
+        .header-center { display:flex; align-items:center; gap:12px; }
+        .header-center .mode-label { font-size:13px; font-weight:500; color:rgba(255,255,255,0.7); transition:0.3s; }
+        .header-center .mode-label.active { color:white; }
+        /* Toggle switch */
+        .switch { position:relative; display:inline-block; width:60px; height:30px; flex-shrink:0; }
+        .switch input { opacity:0; width:0; height:0; }
+        .slider { position:absolute; cursor:pointer; inset:0; background:#ccc; transition:0.4s; border-radius:30px; }
+        .slider:before { content:""; position:absolute; height:22px; width:22px; left:4px; bottom:4px; background:white; transition:0.4s; border-radius:50%; }
+        input:checked + .slider { background:#2196F3; }
+        input:checked + .slider:before { transform:translateX(30px); }
         .header-right { display:flex; align-items:center; gap:16px; font-size:14px; }
         .header-right i { cursor:pointer; opacity:0.8; transition:0.2s; }
         .header-right i:hover { opacity:1; }
@@ -70,52 +79,20 @@
         .calendar-grid .day-cell.empty:hover { background:transparent; }
         .footer { background:#001f3f; color:#b0c4de; text-align:center; padding:18px 16px; font-size:14px; letter-spacing:0.3px; border-top:1px solid #003366; margin-top:auto; }
         @media (min-width:768px) { .content { padding:24px 32px; } .list-container { max-height:560px; } #map { height:400px; } .header-left h1 { font-size:26px; } .calendar-grid .day-cell { padding:12px 0; font-size:16px; } }
-        @media (max-width:480px) { .header-left h1 { font-size:16px; } .header-right { font-size:12px; } .activity-item .top-row { gap:4px 8px; } .activity-item .fecha { font-size:13px; } .activity-item .hora { font-size:12px; padding:0 8px; } .activity-item .actividad { font-size:14px; } .list-container { max-height:380px; } }
+        @media (max-width:480px) { .header-left h1 { font-size:16px; } .header-right { font-size:12px; } .activity-item .top-row { gap:4px 8px; } .activity-item .fecha { font-size:13px; } .activity-item .hora { font-size:12px; padding:0 8px; } .activity-item .actividad { font-size:14px; } .list-container { max-height:380px; } .header-center .mode-label { font-size:11px; } .switch { width:50px; height:26px; } .slider:before { height:18px; width:18px; left:4px; bottom:4px; } input:checked + .slider:before { transform:translateX(24px); } }
         .text-muted { color:#888; }
 
-        /* Botón de ubicación flotante en el mapa */
-        .locate-btn {
-            position: absolute;
-            bottom: 30px;
-            right: 20px;
-            z-index: 1000;
-            background: white;
-            border: none;
-            border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.25);
-            font-size: 20px;
-            color: #0066b3;
-            cursor: pointer;
-            transition: 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .locate-btn:hover {
-            background: #f0f4fa;
-            transform: scale(1.05);
-        }
-        .locate-btn:active {
-            transform: scale(0.95);
-        }
-        .locate-btn i {
-            margin: 0;
-        }
-        .locate-btn.loading {
-            animation: pulse 1.2s infinite;
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0,102,179,0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(0,102,179,0); }
-            100% { box-shadow: 0 0 0 0 rgba(0,102,179,0); }
-        }
+        .locate-btn { position:absolute; bottom:30px; right:20px; z-index:1000; background:white; border:none; border-radius:50%; width:44px; height:44px; box-shadow:0 2px 10px rgba(0,0,0,0.25); font-size:20px; color:#0066b3; cursor:pointer; transition:0.2s; display:flex; align-items:center; justify-content:center; }
+        .locate-btn:hover { background:#f0f4fa; transform:scale(1.05); }
+        .locate-btn:active { transform:scale(0.95); }
+        .locate-btn i { margin:0; }
+        .locate-btn.loading { animation:pulse 1.2s infinite; }
+        @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(0,102,179,0.4); } 70% { box-shadow:0 0 0 10px rgba(0,102,179,0); } 100% { box-shadow:0 0 0 0 rgba(0,102,179,0); } }
     </style>
 </head>
 <body>
 
-<!-- LOGIN OVERLAY (con formulario para autocomplete) -->
+<!-- LOGIN OVERLAY (solo usuario) -->
 <div id="loginOverlay">
     <div class="login-card">
         <i class="fas fa-plane-departure"></i>
@@ -123,10 +100,9 @@
         <p>Accede a la agenda de viaje</p>
         <form id="loginForm" autocomplete="on">
             <input type="text" id="loginUser" name="username" placeholder="Usuario" value="" autocomplete="username">
-            <input type="password" id="loginPass" name="password" placeholder="Contraseña" value="" autocomplete="current-password">
             <button type="submit" id="loginBtn">Entrar</button>
         </form>
-        <div id="loginError" class="login-error">Usuario o contraseña incorrectos</div>
+        <div id="loginError" class="login-error">Usuario no válido</div>
     </div>
 </div>
 
@@ -137,9 +113,17 @@
             <i class="fas fa-globe-europe"></i>
             <h1><span>Viaje</span> a Alemania</h1>
         </div>
+        <div class="header-center">
+            <span class="mode-label active" id="labelInstitucional">Institucional</span>
+            <label class="switch">
+                <input type="checkbox" id="modeSwitch">
+                <span class="slider"></span>
+            </label>
+            <span class="mode-label" id="labelTour">Tour</span>
+        </div>
         <div class="header-right">
             <i class="fas fa-user-circle" style="font-size:20px;"></i>
-            <span id="userDisplay">germany26</span>
+            <span id="userDisplay">huber</span>
             <i class="fas fa-sign-out-alt" id="logoutBtn" style="font-size:18px;"></i>
         </div>
     </header>
@@ -182,12 +166,11 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --------------------------------------------------------------
-    // LOGIN (con formulario y autocomplete)
+    // LOGIN (solo usuario)
     // --------------------------------------------------------------
-    const validUsers = { 'germany26': 'volga', 'argento': 'volga' };
+    const validUsers = ['huber', 'kriger', 'visita'];
     const loginOverlay = document.getElementById('loginOverlay');
     const loginUser = document.getElementById('loginUser');
-    const loginPass = document.getElementById('loginPass');
     const loginForm = document.getElementById('loginForm');
     const loginError = document.getElementById('loginError');
     const app = document.getElementById('app');
@@ -196,8 +179,7 @@
     function doLogin(e) {
         if (e) e.preventDefault();
         const u = loginUser.value.trim().toLowerCase();
-        const p = loginPass.value.trim();
-        if (validUsers[u] && validUsers[u] === p) {
+        if (validUsers.includes(u)) {
             loginError.style.display = 'none';
             loginOverlay.classList.add('hidden');
             app.classList.add('active');
@@ -213,9 +195,37 @@
         app.classList.remove('active');
         loginOverlay.classList.remove('hidden');
         loginUser.value = '';
-        loginPass.value = '';
         loginError.style.display = 'none';
-        // Opcional: limpiar el formulario de autocompletado
+    });
+
+    // --------------------------------------------------------------
+    // SWITCH DE MODO
+    // --------------------------------------------------------------
+    const modeSwitch = document.getElementById('modeSwitch');
+    const labelInst = document.getElementById('labelInstitucional');
+    const labelTour = document.getElementById('labelTour');
+
+    // Detectar URL actual para posicionar el switch
+    const currentUrl = window.location.href;
+    const isTourPage = currentUrl.includes('tour.html');
+    if (isTourPage) {
+        modeSwitch.checked = true;
+        labelInst.classList.remove('active');
+        labelTour.classList.add('active');
+    } else {
+        modeSwitch.checked = false;
+        labelInst.classList.add('active');
+        labelTour.classList.remove('active');
+    }
+
+    modeSwitch.addEventListener('change', function() {
+        if (this.checked) {
+            // Modo Tour
+            window.location.href = 'https://pablokriger.github.io/alemania/tour.html';
+        } else {
+            // Modo Institucional
+            window.location.href = 'https://pablokriger.github.io/alemania/';
+        }
     });
 
     // --------------------------------------------------------------
@@ -483,7 +493,6 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
 
-        // Botón de ubicación
         document.getElementById('locateBtn').addEventListener('click', locateUser);
     }
 
@@ -504,9 +513,8 @@
             (pos) => {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
-                const accuracy = pos.coords.accuracy; // en metros
+                const accuracy = pos.coords.accuracy;
 
-                // Eliminar marcador anterior
                 if (userLocationMarker) {
                     map.removeLayer(userLocationMarker);
                     userLocationMarker = null;
@@ -516,7 +524,6 @@
                     userLocationCircle = null;
                 }
 
-                // Marcador personalizado (azul)
                 const icon = L.divIcon({
                     className: 'user-location-icon',
                     html: '<i class="fas fa-circle" style="color:#0066b3;font-size:22px;text-shadow:0 0 8px rgba(0,102,179,0.5);"></i>',
@@ -526,7 +533,6 @@
                 userLocationMarker = L.marker([lat, lng], { icon }).addTo(map);
                 userLocationMarker.bindPopup('📍 Tu ubicación actual');
 
-                // Círculo de precisión
                 if (accuracy) {
                     userLocationCircle = L.circle([lat, lng], {
                         radius: accuracy,
@@ -538,7 +544,6 @@
                     }).addTo(map);
                 }
 
-                // Centrar el mapa en la ubicación
                 map.setView([lat, lng], 15);
                 btn.classList.remove('loading');
                 isLocating = false;
@@ -553,13 +558,11 @@
         );
     }
 
-    // Intentar obtener ubicación automáticamente al cargar los datos (solo una vez)
     let locationAttempted = false;
     function autoLocate() {
         if (locationAttempted) return;
         locationAttempted = true;
         if (navigator.geolocation) {
-            // Esperar un poco a que el mapa esté listo
             setTimeout(() => {
                 if (map) locateUser();
             }, 800);
@@ -685,7 +688,6 @@
                 }
             }
 
-            // Intentar geolocalización automática (solo una vez)
             autoLocate();
 
         } catch (error) {
