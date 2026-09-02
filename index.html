@@ -9,7 +9,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Estilos iguales que antes */
+        /* (estilos iguales, añadimos algunos para el botón de ubicación) */
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Roboto,system-ui,sans-serif; }
         body { background:#f5f7fa; color:#1e2a3a; min-height:100vh; display:flex; flex-direction:column; }
         #loginOverlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; transition:opacity 0.4s ease; }
@@ -53,7 +53,7 @@
         .activity-item .lugar i { color:#888; font-size:13px; }
         .activity-item .action-btn { align-self:flex-start; margin-top:8px; background:none; border:none; color:#0066b3; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; background:#eef3fa; transition:0.2s; }
         .activity-item .action-btn:hover { background:#d4e2f0; }
-        .map-section { background:white; border-radius:24px; box-shadow:0 8px 30px rgba(0,0,0,0.08); overflow:hidden; padding:8px; }
+        .map-section { background:white; border-radius:24px; box-shadow:0 8px 30px rgba(0,0,0,0.08); overflow:hidden; padding:8px; position:relative; }
         #map { height:300px; width:100%; border-radius:16px; z-index:1; }
         .calendar-section { background:white; border-radius:24px; box-shadow:0 8px 30px rgba(0,0,0,0.08); padding:16px 12px 20px; }
         .calendar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-weight:600; font-size:18px; }
@@ -72,23 +72,61 @@
         @media (min-width:768px) { .content { padding:24px 32px; } .list-container { max-height:560px; } #map { height:400px; } .header-left h1 { font-size:26px; } .calendar-grid .day-cell { padding:12px 0; font-size:16px; } }
         @media (max-width:480px) { .header-left h1 { font-size:16px; } .header-right { font-size:12px; } .activity-item .top-row { gap:4px 8px; } .activity-item .fecha { font-size:13px; } .activity-item .hora { font-size:12px; padding:0 8px; } .activity-item .actividad { font-size:14px; } .list-container { max-height:380px; } }
         .text-muted { color:#888; }
+
+        /* Botón de ubicación flotante en el mapa */
+        .locate-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+            font-size: 20px;
+            color: #0066b3;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .locate-btn:hover {
+            background: #f0f4fa;
+            transform: scale(1.05);
+        }
+        .locate-btn:active {
+            transform: scale(0.95);
+        }
+        .locate-btn i {
+            margin: 0;
+        }
+        .locate-btn.loading {
+            animation: pulse 1.2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0,102,179,0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(0,102,179,0); }
+            100% { box-shadow: 0 0 0 0 rgba(0,102,179,0); }
+        }
     </style>
 </head>
 <body>
 
-<!-- LOGIN OVERLAY -->
+<!-- LOGIN OVERLAY (con formulario para autocomplete) -->
 <div id="loginOverlay">
     <div class="login-card">
         <i class="fas fa-plane-departure"></i>
         <h2>Alemania 2026</h2>
         <p>Accede a la agenda de viaje</p>
-        <!-- FORMULARIO DE LOGIN -->
         <form id="loginForm" autocomplete="on">
-            <input type="text" id="loginUser" name="username" placeholder="Usuario" value="" autocomplete="username" required>
-            <input type="password" id="loginPass" name="password" placeholder="Contraseña" value="" autocomplete="current-password" required>
+            <input type="text" id="loginUser" name="username" placeholder="Usuario" value="" autocomplete="username">
+            <input type="password" id="loginPass" name="password" placeholder="Contraseña" value="" autocomplete="current-password">
             <button type="submit" id="loginBtn">Entrar</button>
-            <div id="loginError" class="login-error">Usuario o contraseña incorrectos</div>
         </form>
+        <div id="loginError" class="login-error">Usuario o contraseña incorrectos</div>
     </div>
 </div>
 
@@ -122,6 +160,9 @@
 
         <section class="map-section">
             <div id="map"></div>
+            <button id="locateBtn" class="locate-btn" title="Mi ubicación">
+                <i class="fas fa-location-arrow"></i>
+            </button>
         </section>
 
         <section class="calendar-section">
@@ -141,7 +182,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --------------------------------------------------------------
-    // LOGIN CON FORMULARIO
+    // LOGIN (con formulario y autocomplete)
     // --------------------------------------------------------------
     const validUsers = { 'germany26': 'volga', 'argento': 'volga' };
     const loginOverlay = document.getElementById('loginOverlay');
@@ -153,7 +194,7 @@
     const userDisplay = document.getElementById('userDisplay');
 
     function doLogin(e) {
-        if (e) e.preventDefault(); // Evita recargar la página
+        if (e) e.preventDefault();
         const u = loginUser.value.trim().toLowerCase();
         const p = loginPass.value.trim();
         if (validUsers[u] && validUsers[u] === p) {
@@ -161,26 +202,20 @@
             loginOverlay.classList.add('hidden');
             app.classList.add('active');
             userDisplay.textContent = u;
-            // Iniciar la app
             initApp();
         } else {
             loginError.style.display = 'block';
-            // Para que el navegador no guarde credenciales incorrectas
-            loginForm.reset();
         }
     }
 
     loginForm.addEventListener('submit', doLogin);
-
-    // Cerrar sesión
     document.getElementById('logoutBtn').addEventListener('click', () => {
         app.classList.remove('active');
         loginOverlay.classList.remove('hidden');
         loginUser.value = '';
         loginPass.value = '';
         loginError.style.display = 'none';
-        // Opcional: resetear el formulario para limpiar estados
-        loginForm.reset();
+        // Opcional: limpiar el formulario de autocompletado
     });
 
     // --------------------------------------------------------------
@@ -191,6 +226,10 @@
     let markers = [];
     let currentHighlightIndex = -1;
     let selectedDay = null;
+    let userLocationMarker = null;
+    let userLocationCircle = null;
+    let isLocating = false;
+
     const SPREADSHEET_CSV = 'https://docs.google.com/spreadsheets/d/1aB61V0SkRZlwybEJAV9uQx2g1lSQrXQTVBkT5ILKUSQ/export?format=csv';
 
     // --------------------------------------------------------------
@@ -366,7 +405,6 @@
 
         container.innerHTML = html;
 
-        // Click en tarjeta
         container.querySelectorAll('.activity-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 if (e.target.closest('.action-btn')) return;
@@ -375,7 +413,6 @@
             });
         });
 
-        // Click en botón
         container.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -384,7 +421,6 @@
             });
         });
 
-        // Scroll al destacado
         if (highlightIndex >= 0 && highlightIndex < activities.length) {
             const items = container.querySelectorAll('.activity-item');
             if (items[highlightIndex]) {
@@ -438,7 +474,7 @@
     }
 
     // --------------------------------------------------------------
-    // MAPA
+    // MAPA Y GEOLOCALIZACIÓN
     // --------------------------------------------------------------
     function initMap() {
         if (map) return;
@@ -446,6 +482,88 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
+
+        // Botón de ubicación
+        document.getElementById('locateBtn').addEventListener('click', locateUser);
+    }
+
+    function locateUser() {
+        if (!map) return;
+        if (isLocating) return;
+        const btn = document.getElementById('locateBtn');
+        btn.classList.add('loading');
+
+        if (!navigator.geolocation) {
+            alert('Tu navegador no soporta geolocalización.');
+            btn.classList.remove('loading');
+            return;
+        }
+
+        isLocating = true;
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                const accuracy = pos.coords.accuracy; // en metros
+
+                // Eliminar marcador anterior
+                if (userLocationMarker) {
+                    map.removeLayer(userLocationMarker);
+                    userLocationMarker = null;
+                }
+                if (userLocationCircle) {
+                    map.removeLayer(userLocationCircle);
+                    userLocationCircle = null;
+                }
+
+                // Marcador personalizado (azul)
+                const icon = L.divIcon({
+                    className: 'user-location-icon',
+                    html: '<i class="fas fa-circle" style="color:#0066b3;font-size:22px;text-shadow:0 0 8px rgba(0,102,179,0.5);"></i>',
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11]
+                });
+                userLocationMarker = L.marker([lat, lng], { icon }).addTo(map);
+                userLocationMarker.bindPopup('📍 Tu ubicación actual');
+
+                // Círculo de precisión
+                if (accuracy) {
+                    userLocationCircle = L.circle([lat, lng], {
+                        radius: accuracy,
+                        color: '#0066b3',
+                        fillColor: '#0066b3',
+                        fillOpacity: 0.1,
+                        weight: 2,
+                        opacity: 0.5
+                    }).addTo(map);
+                }
+
+                // Centrar el mapa en la ubicación
+                map.setView([lat, lng], 15);
+                btn.classList.remove('loading');
+                isLocating = false;
+            },
+            (err) => {
+                console.warn('Error de geolocalización:', err.message);
+                alert('No se pudo obtener tu ubicación. Verifica los permisos.');
+                btn.classList.remove('loading');
+                isLocating = false;
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
+    }
+
+    // Intentar obtener ubicación automáticamente al cargar los datos (solo una vez)
+    let locationAttempted = false;
+    function autoLocate() {
+        if (locationAttempted) return;
+        locationAttempted = true;
+        if (navigator.geolocation) {
+            // Esperar un poco a que el mapa esté listo
+            setTimeout(() => {
+                if (map) locateUser();
+            }, 800);
+        }
     }
 
     function updateMarkers(activities, highlightIndex) {
@@ -566,6 +684,9 @@
                     renderCalendar(allActivities, selectedDay);
                 }
             }
+
+            // Intentar geolocalización automática (solo una vez)
+            autoLocate();
 
         } catch (error) {
             console.error('Error:', error);
