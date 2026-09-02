@@ -32,7 +32,6 @@
         .header-center { display:flex; align-items:center; gap:12px; }
         .header-center .mode-label { font-size:13px; font-weight:500; color:rgba(255,255,255,0.7); transition:0.3s; }
         .header-center .mode-label.active { color:white; }
-        /* Toggle switch */
         .switch { position:relative; display:inline-block; width:60px; height:30px; flex-shrink:0; }
         .switch input { opacity:0; width:0; height:0; }
         .slider { position:absolute; cursor:pointer; inset:0; background:#ccc; transition:0.4s; border-radius:30px; }
@@ -50,10 +49,33 @@
         .list-container::-webkit-scrollbar { width:6px; }
         .list-container::-webkit-scrollbar-track { background:#f0f0f0; border-radius:8px; }
         .list-container::-webkit-scrollbar-thumb { background:#b0b0b0; border-radius:8px; }
-        .activity-item { display:flex; flex-direction:column; padding:14px 16px; margin-bottom:10px; border-radius:16px; background:#fafbfc; border-left:6px solid #ccc; transition:all 0.25s ease; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02); position:relative; }
-        .activity-item.highlight { background:#ffffff; border-left-width:8px; box-shadow:0 6px 20px rgba(0,0,0,0.08); transform:scale(1.01); }
-        .activity-item.faded { opacity:0.6; filter:grayscale(0.2); }
-        .activity-item .top-row { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; margin-bottom:6px; }
+
+        /* Estilos para agrupación por día (acordeón) */
+        .day-group { margin-bottom:12px; border-radius:16px; overflow:hidden; border:1px solid #e9edf2; }
+        .day-header {
+            background:#f8faff; padding:12px 18px; cursor:pointer; display:flex;
+            justify-content:space-between; align-items:center; font-weight:600; font-size:16px;
+            transition:0.2s; user-select:none;
+            border-left:6px solid #0066b3;
+        }
+        .day-header:hover { background:#eef4fa; }
+        .day-header i { transition:0.3s; }
+        .day-header .fa-chevron-down { transform:rotate(0deg); }
+        .day-header.open .fa-chevron-down { transform:rotate(180deg); }
+        .day-header .day-badge { background:#0066b3; color:white; border-radius:20px; padding:0 10px; font-size:13px; line-height:24px; }
+
+        .day-items { max-height:0; overflow:hidden; transition:max-height 0.4s ease; background:white; }
+        .day-items.open { max-height:2000px; }
+
+        .activity-item {
+            display:flex; flex-direction:column; padding:14px 18px;
+            border-top:1px solid #f0f2f5; background:#fafbfc;
+            cursor:pointer; transition:0.2s;
+        }
+        .activity-item:last-child { border-bottom:none; }
+        .activity-item:hover { background:#f0f5fc; }
+        .activity-item.highlight { background:#e6f0ff; border-left:4px solid #0066b3; }
+        .activity-item .top-row { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; margin-bottom:4px; }
         .activity-item .num { font-weight:700; font-size:14px; color:#1a2a3a; background:#e9edf2; padding:0 8px; border-radius:20px; line-height:24px; }
         .activity-item .fecha { font-size:15px; font-weight:600; color:#1e2a3a; }
         .activity-item .hora { font-size:14px; color:#2c3e50; background:#eef2f7; padding:0 10px; border-radius:20px; line-height:24px; font-weight:500; }
@@ -62,6 +84,7 @@
         .activity-item .lugar i { color:#888; font-size:13px; }
         .activity-item .action-btn { align-self:flex-start; margin-top:8px; background:none; border:none; color:#0066b3; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; background:#eef3fa; transition:0.2s; }
         .activity-item .action-btn:hover { background:#d4e2f0; }
+
         .map-section { background:white; border-radius:24px; box-shadow:0 8px 30px rgba(0,0,0,0.08); overflow:hidden; padding:8px; position:relative; }
         #map { height:300px; width:100%; border-radius:16px; z-index:1; }
         .calendar-section { background:white; border-radius:24px; box-shadow:0 8px 30px rgba(0,0,0,0.08); padding:16px 12px 20px; }
@@ -166,7 +189,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --------------------------------------------------------------
-    // LOGIN (solo usuario)
+    // LOGIN (solo usuario) con memoria en localStorage
     // --------------------------------------------------------------
     const validUsers = ['huber', 'kriger', 'visita'];
     const loginOverlay = document.getElementById('loginOverlay');
@@ -176,11 +199,35 @@
     const app = document.getElementById('app');
     const userDisplay = document.getElementById('userDisplay');
 
+    // Comprobar si hay usuario guardado
+    const savedUser = localStorage.getItem('loggedUser');
+    if (savedUser && validUsers.includes(savedUser)) {
+        // Saltar login
+        loginOverlay.classList.add('hidden');
+        app.classList.add('active');
+        userDisplay.textContent = savedUser;
+        // Inicializar app después de cargar los datos
+        // Pero los datos se cargan en initApp, que se llama después de login.
+        // Como estamos saltando el login, debemos llamar a initApp manualmente.
+        // Sin embargo, initApp necesita que allActivities esté cargado.
+        // Para evitar duplicar, haremos que initApp se ejecute al final.
+        // Pero necesitamos que el script cargue los datos.
+        // Podemos establecer una variable para indicar que ya estamos logueados.
+        window._autoLogged = true;
+        // Llamaremos a initApp después de cargar el script.
+        // Pero como el script sigue ejecutándose, podemos llamar a initApp al final.
+        // Usaremos un setTimeout para asegurar que todo esté listo.
+        setTimeout(() => {
+            if (typeof initApp === 'function') initApp();
+        }, 100);
+    }
+
     function doLogin(e) {
         if (e) e.preventDefault();
         const u = loginUser.value.trim().toLowerCase();
         if (validUsers.includes(u)) {
             loginError.style.display = 'none';
+            localStorage.setItem('loggedUser', u);
             loginOverlay.classList.add('hidden');
             app.classList.add('active');
             userDisplay.textContent = u;
@@ -192,6 +239,7 @@
 
     loginForm.addEventListener('submit', doLogin);
     document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.removeItem('loggedUser');
         app.classList.remove('active');
         loginOverlay.classList.remove('hidden');
         loginUser.value = '';
@@ -205,7 +253,6 @@
     const labelInst = document.getElementById('labelInstitucional');
     const labelTour = document.getElementById('labelTour');
 
-    // Detectar URL actual para posicionar el switch
     const currentUrl = window.location.href;
     const isTourPage = currentUrl.includes('tour.html');
     if (isTourPage) {
@@ -220,10 +267,8 @@
 
     modeSwitch.addEventListener('change', function() {
         if (this.checked) {
-            // Modo Tour
             window.location.href = 'https://pablokriger.github.io/alemania/tour.html';
         } else {
-            // Modo Institucional
             window.location.href = 'https://pablokriger.github.io/alemania/';
         }
     });
@@ -362,7 +407,7 @@
     function getDayColor(index) { return dayColors[index % dayColors.length]; }
 
     // --------------------------------------------------------------
-    // RENDER
+    // RENDER: Agrupado por día con acordeón
     // --------------------------------------------------------------
     function renderActivities(activities, highlightIndex) {
         const container = document.getElementById('activityList');
@@ -371,13 +416,22 @@
             return;
         }
 
+        // Agrupar por fecha (día)
         const dayGroups = {};
         activities.forEach((act, idx) => {
-            const key = act.Fecha;
+            const key = act.Fecha; // formato "6/9/2026"
             if (!dayGroups[key]) dayGroups[key] = [];
-            dayGroups[key].push(idx);
+            dayGroups[key].push({ act, idx });
         });
-        const uniqueDays = Object.keys(dayGroups);
+
+        // Obtener lista de días únicos ordenados por fecha
+        const uniqueDays = Object.keys(dayGroups).sort((a, b) => {
+            const da = parseDate(a);
+            const db = parseDate(b);
+            return da - db;
+        });
+
+        // Asignar colores a cada día (no consecutivos)
         const dayColorMap = {};
         uniqueDays.forEach((day, i) => {
             let color = getDayColor(i);
@@ -388,33 +442,78 @@
             dayColorMap[day] = color;
         });
 
-        let html = '';
-        activities.forEach((act, idx) => {
-            const color = dayColorMap[act.Fecha] || '#ccc';
-            const isHighlight = (idx === highlightIndex);
-            const faded = !isHighlight;
-            const fechaObj = parseDate(act.Fecha);
-            const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-ES', { day:'2-digit', month:'short' }) : act.Fecha;
-            const coords = parseCoords(act.Coordenadas);
-            const hasCoords = !!coords;
+        // Determinar qué día debe estar abierto (el que contiene highlightIndex)
+        let openDay = null;
+        if (highlightIndex >= 0 && highlightIndex < activities.length) {
+            const act = activities[highlightIndex];
+            openDay = act.Fecha;
+        }
+        // Si no hay highlight, abrir el primer día
+        if (!openDay && uniqueDays.length) openDay = uniqueDays[0];
 
+        let html = '';
+        uniqueDays.forEach((day, di) => {
+            const items = dayGroups[day];
+            const color = dayColorMap[day] || '#ccc';
+            const isOpen = (day === openDay);
+            const fechaObj = parseDate(day);
+            const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' }) : day;
+
+            html += `<div class="day-group">`;
             html += `
-                <div class="activity-item ${isHighlight ? 'highlight' : ''} ${faded ? 'faded' : ''}" 
-                     style="border-left-color: ${color};" data-index="${idx}">
-                    <div class="top-row">
-                        <span class="num">#${act.Num || idx+1}</span>
-                        <span class="fecha"><i class="far fa-calendar-alt" style="margin-right:4px;"></i>${fechaStr}</span>
-                        <span class="hora"><i class="far fa-clock"></i> ${act.Hora || '—'}</span>
-                    </div>
-                    <div class="actividad">${act.Actividad || 'Sin descripción'}</div>
-                    <div class="lugar"><i class="fas fa-map-pin"></i> ${act.Lugar || 'Sin lugar'}</div>
-                    ${hasCoords ? `<button class="action-btn" data-idx="${idx}"><i class="fas fa-crosshairs"></i> Ver en mapa</button>` : ''}
+                <div class="day-header ${isOpen ? 'open' : ''}" style="border-left-color:${color};" data-day="${day}">
+                    <span><i class="far fa-calendar-alt" style="margin-right:8px;color:${color};"></i>${fechaStr}</span>
+                    <span class="day-badge">${items.length} act.</span>
+                    <i class="fas fa-chevron-down"></i>
                 </div>
             `;
+            html += `<div class="day-items ${isOpen ? 'open' : ''}">`;
+
+            items.forEach(({ act, idx }) => {
+                const isHighlight = (idx === highlightIndex);
+                const coords = parseCoords(act.Coordenadas);
+                const hasCoords = !!coords;
+
+                html += `
+                    <div class="activity-item ${isHighlight ? 'highlight' : ''}" data-index="${idx}">
+                        <div class="top-row">
+                            <span class="num">#${act.Num || idx+1}</span>
+                            <span class="hora"><i class="far fa-clock"></i> ${act.Hora || '—'}</span>
+                        </div>
+                        <div class="actividad">${act.Actividad || 'Sin descripción'}</div>
+                        <div class="lugar"><i class="fas fa-map-pin"></i> ${act.Lugar || 'Sin lugar'}</div>
+                        ${hasCoords ? `<button class="action-btn" data-idx="${idx}"><i class="fas fa-crosshairs"></i> Ver en mapa</button>` : ''}
+                    </div>
+                `;
+            });
+
+            html += `</div></div>`;
         });
 
         container.innerHTML = html;
 
+        // Eventos para los headers (acordeón)
+        container.querySelectorAll('.day-header').forEach(header => {
+            header.addEventListener('click', function(e) {
+                // Evitar que clic en botón interno dispare el toggle
+                if (e.target.closest('.action-btn')) return;
+                const day = this.dataset.day;
+                const items = this.nextElementSibling;
+                const isOpen = items.classList.contains('open');
+
+                // Cerrar todos los demás
+                container.querySelectorAll('.day-items').forEach(el => el.classList.remove('open'));
+                container.querySelectorAll('.day-header').forEach(h => h.classList.remove('open'));
+
+                if (!isOpen) {
+                    items.classList.add('open');
+                    this.classList.add('open');
+                }
+                // Si ya estaba abierto, se cierra (toggling off)
+            });
+        });
+
+        // Eventos: clic en actividad
         container.querySelectorAll('.activity-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 if (e.target.closest('.action-btn')) return;
@@ -423,6 +522,7 @@
             });
         });
 
+        // Eventos: botón "Ver en mapa"
         container.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -431,6 +531,7 @@
             });
         });
 
+        // Scroll al elemento destacado
         if (highlightIndex >= 0 && highlightIndex < activities.length) {
             const items = container.querySelectorAll('.activity-item');
             if (items[highlightIndex]) {
@@ -441,6 +542,9 @@
         document.getElementById('activityCounter').textContent = `${activities.length} actividades`;
     }
 
+    // --------------------------------------------------------------
+    // RENDER CALENDARIO (sin cambios)
+    // --------------------------------------------------------------
     function renderCalendar(activities, selectedDayNum) {
         const grid = document.getElementById('calendarGrid');
         const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -484,7 +588,7 @@
     }
 
     // --------------------------------------------------------------
-    // MAPA Y GEOLOCALIZACIÓN
+    // MAPA Y GEOLOCALIZACIÓN (sin cambios)
     // --------------------------------------------------------------
     function initMap() {
         if (map) return;
@@ -492,7 +596,6 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
-
         document.getElementById('locateBtn').addEventListener('click', locateUser);
     }
 
@@ -612,10 +715,11 @@
             selectedDay = date.getDate();
             renderCalendar(allActivities, selectedDay);
         }
+        // Asegurar que el día de esta actividad esté abierto (ya lo hace renderActivities)
     }
 
     // --------------------------------------------------------------
-    // FILTRO POR DÍA
+    // FILTRO POR DÍA (desde calendario)
     // --------------------------------------------------------------
     function filterByDay(day) {
         selectedDay = day;
@@ -624,10 +728,12 @@
             return d && d.getDate() === day && d.getMonth() === 8 && d.getFullYear() === 2026;
         });
         if (filtered.length === 0) {
+            // No hay actividades ese día, mostrar todas pero mantener highlight
             renderActivities(allActivities, currentHighlightIndex);
             renderCalendar(allActivities, selectedDay);
             return;
         }
+        // Encontrar la primera actividad de ese día y hacer focus
         const firstIdx = allActivities.indexOf(filtered[0]);
         if (firstIdx >= 0) {
             focusOnActivity(firstIdx);
@@ -709,6 +815,16 @@
             renderActivities(allActivities, currentHighlightIndex);
             updateMarkers(allActivities, currentHighlightIndex);
             renderCalendar(allActivities, selectedDay);
+        }
+    }
+
+    // Si el usuario ya estaba autenticado (auto-login), se ejecuta initApp
+    if (window._autoLogged) {
+        // Esperar a que el DOM esté listo
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            initApp();
+        } else {
+            document.addEventListener('DOMContentLoaded', initApp);
         }
     }
 
