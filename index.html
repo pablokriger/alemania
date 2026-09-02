@@ -9,449 +9,69 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-        }
-        body {
-            background: #f5f7fa;
-            color: #1e2a3a;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* ----- LOGIN OVERLAY ----- */
-        #loginOverlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(6px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 20px;
-            transition: opacity 0.4s ease;
-        }
-        #loginOverlay.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-        .login-card {
-            background: white;
-            border-radius: 32px;
-            padding: 40px 30px;
-            max-width: 380px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            text-align: center;
-        }
-        .login-card i {
-            font-size: 48px;
-            color: #0066b3;
-            margin-bottom: 10px;
-        }
-        .login-card h2 {
-            font-weight: 300;
-            font-size: 24px;
-            margin-bottom: 6px;
-        }
-        .login-card p {
-            color: #666;
-            margin-bottom: 24px;
-            font-size: 14px;
-        }
-        .login-card input {
-            width: 100%;
-            padding: 14px 16px;
-            margin-bottom: 14px;
-            border: 1px solid #ddd;
-            border-radius: 40px;
-            font-size: 16px;
-            outline: none;
-            transition: 0.2s;
-        }
-        .login-card input:focus {
-            border-color: #0066b3;
-            box-shadow: 0 0 0 3px rgba(0,102,179,0.15);
-        }
-        .login-card button {
-            width: 100%;
-            padding: 14px;
-            background: #0066b3;
-            color: white;
-            border: none;
-            border-radius: 40px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .login-card button:hover {
-            background: #004d8a;
-        }
-        .login-error {
-            color: #c0392b;
-            font-size: 14px;
-            margin-top: 12px;
-            display: none;
-        }
-
-        /* ----- MAIN APP ----- */
-        #app {
-            display: none;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        #app.active {
-            display: flex;
-        }
-
-        /* HEADER */
-        .header {
-            background: linear-gradient(135deg, #001f3f, #003366);
-            color: white;
-            padding: 16px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .header-left i {
-            font-size: 28px;
-            color: #ffd700;
-        }
-        .header-left h1 {
-            font-size: 20px;
-            font-weight: 400;
-            letter-spacing: 0.5px;
-        }
-        .header-left h1 span {
-            font-weight: 700;
-        }
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            font-size: 14px;
-        }
-        .header-right i {
-            cursor: pointer;
-            opacity: 0.8;
-            transition: 0.2s;
-        }
-        .header-right i:hover {
-            opacity: 1;
-        }
-
-        /* CONTENT */
-        .content {
-            flex: 1;
-            padding: 16px 16px 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        /* LISTA (CILINDRO) */
-        .list-section {
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-            overflow: hidden;
-            padding: 16px 0;
-        }
-        .list-title {
-            padding: 0 20px 12px;
-            font-size: 18px;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #eee;
-        }
-        .list-title small {
-            font-weight: 400;
-            font-size: 14px;
-            color: #666;
-        }
-        .list-container {
-            max-height: 460px;
-            overflow-y: auto;
-            padding: 8px 12px 12px;
-            scroll-behavior: smooth;
-        }
-        .list-container::-webkit-scrollbar {
-            width: 6px;
-        }
-        .list-container::-webkit-scrollbar-track {
-            background: #f0f0f0;
-            border-radius: 8px;
-        }
-        .list-container::-webkit-scrollbar-thumb {
-            background: #b0b0b0;
-            border-radius: 8px;
-        }
-
-        .activity-item {
-            display: flex;
-            flex-direction: column;
-            padding: 14px 16px;
-            margin-bottom: 10px;
-            border-radius: 16px;
-            background: #fafbfc;
-            border-left: 6px solid #ccc;
-            transition: all 0.25s ease;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            position: relative;
-        }
-        .activity-item.highlight {
-            background: #ffffff;
-            border-left-width: 8px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-            transform: scale(1.01);
-        }
-        .activity-item.faded {
-            opacity: 0.6;
-            filter: grayscale(0.2);
-        }
-        .activity-item .top-row {
-            display: flex;
-            align-items: baseline;
-            flex-wrap: wrap;
-            gap: 6px 12px;
-            margin-bottom: 6px;
-        }
-        .activity-item .num {
-            font-weight: 700;
-            font-size: 14px;
-            color: #1a2a3a;
-            background: #e9edf2;
-            padding: 0 8px;
-            border-radius: 20px;
-            line-height: 24px;
-        }
-        .activity-item .fecha {
-            font-size: 15px;
-            font-weight: 600;
-            color: #1e2a3a;
-        }
-        .activity-item .hora {
-            font-size: 14px;
-            color: #2c3e50;
-            background: #eef2f7;
-            padding: 0 10px;
-            border-radius: 20px;
-            line-height: 24px;
-            font-weight: 500;
-        }
-        .activity-item .actividad {
-            font-size: 15px;
-            font-weight: 500;
-            margin: 4px 0 2px;
-            line-height: 1.4;
-            white-space: pre-wrap;
-        }
-        .activity-item .lugar {
-            font-size: 13px;
-            color: #444;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 2px;
-        }
-        .activity-item .lugar i {
-            color: #888;
-            font-size: 13px;
-        }
-        .activity-item .action-btn {
-            align-self: flex-start;
-            margin-top: 8px;
-            background: none;
-            border: none;
-            color: #0066b3;
-            font-size: 13px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            background: #eef3fa;
-            transition: 0.2s;
-        }
-        .activity-item .action-btn:hover {
-            background: #d4e2f0;
-        }
-
-        /* MAPA */
-        .map-section {
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-            overflow: hidden;
-            padding: 8px;
-        }
-        #map {
-            height: 300px;
-            width: 100%;
-            border-radius: 16px;
-            z-index: 1;
-        }
-
-        /* CALENDARIO */
-        .calendar-section {
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-            padding: 16px 12px 20px;
-        }
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 14px;
-            font-weight: 600;
-            font-size: 18px;
-        }
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
-            text-align: center;
-        }
-        .calendar-grid .day-name {
-            font-size: 12px;
-            font-weight: 600;
-            color: #666;
-            padding: 4px 0;
-        }
-        .calendar-grid .day-cell {
-            padding: 8px 0;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: 0.2s;
-            background: transparent;
-            color: #1e2a3a;
-            position: relative;
-        }
-        .calendar-grid .day-cell:hover {
-            background: #e9edf2;
-        }
-        .calendar-grid .day-cell.has-activity::after {
-            content: '';
-            position: absolute;
-            bottom: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 5px;
-            height: 5px;
-            border-radius: 50%;
-            background: #0066b3;
-        }
-        .calendar-grid .day-cell.today {
-            background: #c0392b;
-            color: white;
-            font-weight: 700;
-        }
-        .calendar-grid .day-cell.today.has-activity::after {
-            background: white;
-        }
-        .calendar-grid .day-cell.selected {
-            background: #0066b3;
-            color: white;
-        }
-        .calendar-grid .day-cell.selected.has-activity::after {
-            background: white;
-        }
-        .calendar-grid .day-cell.empty {
-            cursor: default;
-        }
-        .calendar-grid .day-cell.empty:hover {
-            background: transparent;
-        }
-
-        /* FOOTER */
-        .footer {
-            background: #001f3f;
-            color: #b0c4de;
-            text-align: center;
-            padding: 18px 16px;
-            font-size: 14px;
-            letter-spacing: 0.3px;
-            border-top: 1px solid #003366;
-            margin-top: auto;
-        }
-
-        /* RESPONSIVE */
-        @media (min-width: 768px) {
-            .content {
-                padding: 24px 32px;
-            }
-            .list-container {
-                max-height: 560px;
-            }
-            #map {
-                height: 400px;
-            }
-            .header-left h1 {
-                font-size: 26px;
-            }
-            .calendar-grid .day-cell {
-                padding: 12px 0;
-                font-size: 16px;
-            }
-        }
-        @media (max-width: 480px) {
-            .header-left h1 {
-                font-size: 16px;
-            }
-            .header-right {
-                font-size: 12px;
-            }
-            .activity-item .top-row {
-                gap: 4px 8px;
-            }
-            .activity-item .fecha {
-                font-size: 13px;
-            }
-            .activity-item .hora {
-                font-size: 12px;
-                padding: 0 8px;
-            }
-            .activity-item .actividad {
-                font-size: 14px;
-            }
-            .list-container {
-                max-height: 380px;
-            }
-        }
-
-        /* util */
-        .text-muted {
-            color: #888;
-        }
-        .mt-1 { margin-top: 6px; }
-        .mb-1 { margin-bottom: 6px; }
-        .flex { display: flex; align-items: center; gap: 6px; }
+        /* (estilos iguales que antes, no cambian) */
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Roboto,system-ui,sans-serif; }
+        body { background:#f5f7fa; color:#1e2a3a; min-height:100vh; display:flex; flex-direction:column; }
+        #loginOverlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; transition:opacity 0.4s ease; }
+        #loginOverlay.hidden { opacity:0; pointer-events:none; }
+        .login-card { background:white; border-radius:32px; padding:40px 30px; max-width:380px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center; }
+        .login-card i { font-size:48px; color:#0066b3; margin-bottom:10px; }
+        .login-card h2 { font-weight:300; font-size:24px; margin-bottom:6px; }
+        .login-card p { color:#666; margin-bottom:24px; font-size:14px; }
+        .login-card input { width:100%; padding:14px 16px; margin-bottom:14px; border:1px solid #ddd; border-radius:40px; font-size:16px; outline:none; transition:0.2s; }
+        .login-card input:focus { border-color:#0066b3; box-shadow:0 0 0 3px rgba(0,102,179,0.15); }
+        .login-card button { width:100%; padding:14px; background:#0066b3; color:white; border:none; border-radius:40px; font-size:18px; font-weight:600; cursor:pointer; transition:0.2s; }
+        .login-card button:hover { background:#004d8a; }
+        .login-error { color:#c0392b; font-size:14px; margin-top:12px; display:none; }
+        #app { display:none; flex-direction:column; min-height:100vh; }
+        #app.active { display:flex; }
+        .header { background:linear-gradient(135deg,#001f3f,#003366); color:white; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; box-shadow:0 2px 12px rgba(0,0,0,0.2); position:sticky; top:0; z-index:100; }
+        .header-left { display:flex; align-items:center; gap:12px; }
+        .header-left i { font-size:28px; color:#ffd700; }
+        .header-left h1 { font-size:20px; font-weight:400; letter-spacing:0.5px; }
+        .header-left h1 span { font-weight:700; }
+        .header-right { display:flex; align-items:center; gap:16px; font-size:14px; }
+        .header-right i { cursor:pointer; opacity:0.8; transition:0.2s; }
+        .header-right i:hover { opacity:1; }
+        .content { flex:1; padding:16px 16px 10px; display:flex; flex-direction:column; gap:20px; max-width:1200px; margin:0 auto; width:100%; }
+        .list-section { background:white; border-radius:24px; box-shadow:0 8px 30px rgba(0,0,0,0.08); overflow:hidden; padding:16px 0; }
+        .list-title { padding:0 20px 12px; font-size:18px; font-weight:600; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; }
+        .list-title small { font-weight:400; font-size:14px; color:#666; }
+        .list-container { max-height:460px; overflow-y:auto; padding:8px 12px 12px; scroll-behavior:smooth; }
+        .list-container::-webkit-scrollbar { width:6px; }
+        .list-container::-webkit-scrollbar-track { background:#f0f0f0; border-radius:8px; }
+        .list-container::-webkit-scrollbar-thumb { background:#b0b0b0; border-radius:8px; }
+        .activity-item { display:flex; flex-direction:column; padding:14px 16px; margin-bottom:10px; border-radius:16px; background:#fafbfc; border-left:6px solid #ccc; transition:all 0.25s ease; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02); position:relative; }
+        .activity-item.highlight { background:#ffffff; border-left-width:8px; box-shadow:0 6px 20px rgba(0,0,0,0.08); transform:scale(1.01); }
+        .activity-item.faded { opacity:0.6; filter:grayscale(0.2); }
+        .activity-item .top-row { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; margin-bottom:6px; }
+        .activity-item .num { font-weight:700; font-size:14px; color:#1a2a3a; background:#e9edf2; padding:0 8px; border-radius:20px; line-height:24px; }
+        .activity-item .fecha { font-size:15px; font-weight:600; color:#1e2a3a; }
+        .activity-item .hora { font-size:14px; color:#2c3e50; background:#eef2f7; padding:0 10px; border-radius:20px; line-height:24px; font-weight:500; }
+        .activity-item .actividad { font-size:15px; font-weight:500; margin:4px 0 2px; line-height:1.4; white-space:pre-wrap; }
+        .activity-item .lugar { font-size:13px; color:#444; display:flex; align-items:center; gap:6px; margin-top:2px; }
+        .activity-item .lugar i { color:#888; font-size:13px; }
+        .activity-item .action-btn { align-self:flex-start; margin-top:8px; background:none; border:none; color:#0066b3; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; background:#eef3fa; transition:0.2s; }
+        .activity-item .action-btn:hover { background:#d4e2f0; }
+        .map-section { background:white; border-radius:24px; box-shadow:0 8px 30px rgba(0,0,0,0.08); overflow:hidden; padding:8px; }
+        #map { height:300px; width:100%; border-radius:16px; z-index:1; }
+        .calendar-section { background:white; border-radius:24px; box-shadow:0 8px 30px rgba(0,0,0,0.08); padding:16px 12px 20px; }
+        .calendar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-weight:600; font-size:18px; }
+        .calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; }
+        .calendar-grid .day-name { font-size:12px; font-weight:600; color:#666; padding:4px 0; }
+        .calendar-grid .day-cell { padding:8px 0; border-radius:30px; font-size:14px; font-weight:500; cursor:pointer; transition:0.2s; background:transparent; color:#1e2a3a; position:relative; }
+        .calendar-grid .day-cell:hover { background:#e9edf2; }
+        .calendar-grid .day-cell.has-activity::after { content:''; position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:5px; height:5px; border-radius:50%; background:#0066b3; }
+        .calendar-grid .day-cell.today { background:#c0392b; color:white; font-weight:700; }
+        .calendar-grid .day-cell.today.has-activity::after { background:white; }
+        .calendar-grid .day-cell.selected { background:#0066b3; color:white; }
+        .calendar-grid .day-cell.selected.has-activity::after { background:white; }
+        .calendar-grid .day-cell.empty { cursor:default; }
+        .calendar-grid .day-cell.empty:hover { background:transparent; }
+        .footer { background:#001f3f; color:#b0c4de; text-align:center; padding:18px 16px; font-size:14px; letter-spacing:0.3px; border-top:1px solid #003366; margin-top:auto; }
+        @media (min-width:768px) { .content { padding:24px 32px; } .list-container { max-height:560px; } #map { height:400px; } .header-left h1 { font-size:26px; } .calendar-grid .day-cell { padding:12px 0; font-size:16px; } }
+        @media (max-width:480px) { .header-left h1 { font-size:16px; } .header-right { font-size:12px; } .activity-item .top-row { gap:4px 8px; } .activity-item .fecha { font-size:13px; } .activity-item .hora { font-size:12px; padding:0 8px; } .activity-item .actividad { font-size:14px; } .list-container { max-height:380px; } }
+        .text-muted { color:#888; }
     </style>
 </head>
 <body>
@@ -471,7 +91,6 @@
 
 <!-- APP PRINCIPAL -->
 <div id="app">
-    <!-- HEADER -->
     <header class="header">
         <div class="header-left">
             <i class="fas fa-globe-europe"></i>
@@ -484,16 +103,13 @@
         </div>
     </header>
 
-    <!-- CONTENIDO -->
     <div class="content">
-        <!-- LISTA -->
         <section class="list-section">
             <div class="list-title">
                 <span><i class="fas fa-list-ul" style="margin-right:8px;"></i>Actividades</span>
                 <small id="activityCounter">0</small>
             </div>
             <div class="list-container" id="activityList">
-                <!-- generado por JS -->
                 <div style="text-align:center;padding:40px 0;color:#999;">
                     <i class="fas fa-spinner fa-spin" style="font-size:28px;"></i>
                     <p style="margin-top:12px;">Cargando agenda...</p>
@@ -501,40 +117,30 @@
             </div>
         </section>
 
-        <!-- MAPA -->
         <section class="map-section">
             <div id="map"></div>
         </section>
 
-        <!-- CALENDARIO -->
         <section class="calendar-section">
             <div class="calendar-header">
                 <span><i class="far fa-calendar-alt" style="margin-right:8px;"></i>Septiembre 2026</span>
                 <span style="font-size:14px;font-weight:400;color:#666;">Click en día para ver actividades</span>
             </div>
-            <div class="calendar-grid" id="calendarGrid">
-                <!-- generado por JS -->
-            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
         </section>
     </div>
 
-    <!-- FOOTER -->
     <footer class="footer">
         (c) Pablo Kriger - Todos los derechos reservados.
     </footer>
 </div>
 
-<!-- LIBRERÍAS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // --------------------------------------------------------------
-    // 1. LOGIN
+    // LOGIN
     // --------------------------------------------------------------
-    const validUsers = {
-        'germany26': 'volga',
-        'argento': 'volga'
-    };
-
+    const validUsers = { 'germany26': 'volga', 'argento': 'volga' };
     const loginOverlay = document.getElementById('loginOverlay');
     const loginUser = document.getElementById('loginUser');
     const loginPass = document.getElementById('loginPass');
@@ -551,17 +157,14 @@
             loginOverlay.classList.add('hidden');
             app.classList.add('active');
             userDisplay.textContent = u;
-            // Iniciar la app
             initApp();
         } else {
             loginError.style.display = 'block';
         }
     }
-
     loginBtn.addEventListener('click', doLogin);
     loginPass.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
     loginUser.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-
     document.getElementById('logoutBtn').addEventListener('click', () => {
         app.classList.remove('active');
         loginOverlay.classList.remove('hidden');
@@ -571,36 +174,87 @@
     });
 
     // --------------------------------------------------------------
-    // 2. DATOS Y LÓGICA PRINCIPAL
+    // VARIABLES GLOBALES
     // --------------------------------------------------------------
     let allActivities = [];
     let map = null;
     let markers = [];
     let currentHighlightIndex = -1;
-    let selectedDay = null; // día seleccionado en calendario (número)
-
+    let selectedDay = null;
     const SPREADSHEET_CSV = 'https://docs.google.com/spreadsheets/d/1aB61V0SkRZlwybEJAV9uQx2g1lSQrXQTVBkT5ILKUSQ/export?format=csv';
 
-    // Colores para días (paleta atractiva)
-    const dayColors = [
-        '#4A90D9', '#E67E22', '#27AE60', '#8E44AD', '#D35400',
-        '#2C3E50', '#16A085', '#C0392B', '#2980B9', '#F39C12',
-        '#1ABC9C', '#7F8C8D', '#E74C3C', '#3498DB', '#2ECC71'
-    ];
+    // --------------------------------------------------------------
+    // PARSER CSV ROBUSTO (maneja comillas, saltos de línea internos, comas)
+    // --------------------------------------------------------------
+    function parseCSV(text) {
+        const rows = [];
+        let currentRow = [];
+        let currentField = '';
+        let insideQuotes = false;
+        let i = 0;
+        const len = text.length;
 
-    function getDayColor(dayIndex) {
-        return dayColors[dayIndex % dayColors.length];
+        while (i < len) {
+            const ch = text[i];
+            if (insideQuotes) {
+                if (ch === '"') {
+                    // Si es "" dentro de comillas, es una comilla escapada
+                    if (i + 1 < len && text[i + 1] === '"') {
+                        currentField += '"';
+                        i += 2;
+                    } else {
+                        insideQuotes = false;
+                        i++;
+                    }
+                } else {
+                    currentField += ch;
+                    i++;
+                }
+            } else {
+                if (ch === '"') {
+                    insideQuotes = true;
+                    i++;
+                } else if (ch === ',') {
+                    currentRow.push(currentField.trim());
+                    currentField = '';
+                    i++;
+                } else if (ch === '\n' || ch === '\r') {
+                    // Saltos de línea: si es \r\n, saltamos ambos
+                    if (ch === '\r' && i + 1 < len && text[i + 1] === '\n') {
+                        i += 2;
+                    } else {
+                        i++;
+                    }
+                    // Si hay caracteres en el campo actual, agregamos la fila
+                    if (currentField.trim() !== '' || currentRow.length > 0) {
+                        currentRow.push(currentField.trim());
+                        rows.push(currentRow);
+                        currentRow = [];
+                        currentField = '';
+                    }
+                } else {
+                    currentField += ch;
+                    i++;
+                }
+            }
+        }
+        // Último campo
+        if (currentField.trim() !== '' || currentRow.length > 0) {
+            currentRow.push(currentField.trim());
+            rows.push(currentRow);
+        }
+        return rows;
     }
 
-    // Parsear coordenadas "31.739674 S, 60.517724 W" => {lat, lng}
+    // --------------------------------------------------------------
+    // UTILIDADES
+    // --------------------------------------------------------------
     function parseCoords(str) {
         if (!str) return null;
         const parts = str.split(',').map(s => s.trim());
         if (parts.length !== 2) return null;
-        const latPart = parts[0];
-        const lngPart = parts[1];
-        const latMatch = latPart.match(/([\d.]+)\s*([NS])/i);
-        const lngMatch = lngPart.match(/([\d.]+)\s*([EW])/i);
+        const latMatch = parts[0].match(/([\d.]+)\s*([NS])/i);
+        const lngMatch = parts[1].match(/([\d.]+)\s*([EW])/i);
         if (!latMatch || !lngMatch) return null;
         let lat = parseFloat(latMatch[1]);
         let lng = parseFloat(lngMatch[1]);
@@ -609,7 +263,6 @@
         return { lat, lng };
     }
 
-    // Parsear fecha "6/9/2026" => Date (asumimos día/mes/año)
     function parseDate(str) {
         const parts = str.split('/');
         if (parts.length !== 3) return null;
@@ -619,21 +272,18 @@
         return new Date(y, m, d);
     }
 
-    // Obtener hora de inicio (si es rango "14:05-14:55" => "14:05")
     function getStartHour(str) {
         if (!str) return '00:00';
         const parts = str.split('-');
         return parts[0].trim();
     }
 
-    // ORDEN POR NÚMERO (columna Num)
     function sortByNumber(a, b) {
         const numA = parseInt(a.Num, 10) || 0;
         const numB = parseInt(b.Num, 10) || 0;
         return numA - numB;
     }
 
-    // Obtener actividad actual o próxima (basado en fecha/hora)
     function findCurrentOrNext(activities) {
         const now = new Date();
         for (let i = 0; i < activities.length; i++) {
@@ -644,15 +294,20 @@
             const startH = getStartHour(act.Hora);
             const [h, m] = startH.split(':').map(Number);
             d.setHours(h || 0, m || 0, 0, 0);
-            if (d >= now) {
-                return i;
-            }
+            if (d >= now) return i;
         }
         return activities.length - 1;
     }
 
+    const dayColors = [
+        '#4A90D9','#E67E22','#27AE60','#8E44AD','#D35400',
+        '#2C3E50','#16A085','#C0392B','#2980B9','#F39C12',
+        '#1ABC9C','#7F8C8D','#E74C3C','#3498DB','#2ECC71'
+    ];
+    function getDayColor(index) { return dayColors[index % dayColors.length]; }
+
     // --------------------------------------------------------------
-    // 3. RENDERIZADO
+    // RENDER
     // --------------------------------------------------------------
     function renderActivities(activities, highlightIndex) {
         const container = document.getElementById('activityList');
@@ -661,33 +316,26 @@
             return;
         }
 
-        // Agrupar por día para asignar colores consistentes
         const dayGroups = {};
         activities.forEach((act, idx) => {
-            const dateKey = act.Fecha;
-            if (!dayGroups[dateKey]) dayGroups[dateKey] = [];
-            dayGroups[dateKey].push(idx);
+            const key = act.Fecha;
+            if (!dayGroups[key]) dayGroups[key] = [];
+            dayGroups[key].push(idx);
         });
         const uniqueDays = Object.keys(dayGroups);
         const dayColorMap = {};
         uniqueDays.forEach((day, i) => {
             let color = getDayColor(i);
-            if (i > 0) {
-                const prevDay = uniqueDays[i-1];
-                const prevColor = dayColorMap[prevDay];
-                if (prevColor === color) {
-                    const idx = dayColors.indexOf(color);
-                    const nextIdx = (idx + 1) % dayColors.length;
-                    color = dayColors[nextIdx];
-                }
+            if (i > 0 && dayColorMap[uniqueDays[i-1]] === color) {
+                const idx = dayColors.indexOf(color);
+                color = dayColors[(idx + 1) % dayColors.length];
             }
             dayColorMap[day] = color;
         });
 
         let html = '';
         activities.forEach((act, idx) => {
-            const dateKey = act.Fecha;
-            const color = dayColorMap[dateKey] || '#ccc';
+            const color = dayColorMap[act.Fecha] || '#ccc';
             const isHighlight = (idx === highlightIndex);
             const faded = !isHighlight;
             const fechaObj = parseDate(act.Fecha);
@@ -712,26 +360,25 @@
 
         container.innerHTML = html;
 
-        // Evento de clic en toda la tarjeta (delegación)
+        // Click en tarjeta
         container.querySelectorAll('.activity-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                // Si el clic fue en el botón, no hacemos nada aquí (el botón tiene su propio listener)
                 if (e.target.closest('.action-btn')) return;
                 const idx = parseInt(item.dataset.index, 10);
                 focusOnActivity(idx);
             });
         });
 
-        // Eventos para botones "Ver en mapa"
+        // Click en botón
         container.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Evita que el clic en el botón dispare también el de la tarjeta
+                e.stopPropagation();
                 const idx = parseInt(btn.dataset.idx, 10);
                 focusOnActivity(idx);
             });
         });
 
-        // Scroll al elemento destacado
+        // Scroll al destacado
         if (highlightIndex >= 0 && highlightIndex < activities.length) {
             const items = container.querySelectorAll('.activity-item');
             if (items[highlightIndex]) {
@@ -739,20 +386,15 @@
             }
         }
 
-        // Actualizar contador
         document.getElementById('activityCounter').textContent = `${activities.length} actividades`;
     }
 
     function renderCalendar(activities, selectedDayNum) {
         const grid = document.getElementById('calendarGrid');
-        const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-        let html = '';
-        dayNames.forEach(name => {
-            html += `<div class="day-name">${name}</div>`;
-        });
+        const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+        let html = dayNames.map(n => `<div class="day-name">${n}</div>`).join('');
 
-        const year = 2026;
-        const month = 8; // septiembre
+        const year = 2026, month = 8;
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
@@ -767,23 +409,20 @@
         const today = new Date();
         const todayDate = (today.getFullYear() === year && today.getMonth() === month) ? today.getDate() : -1;
 
-        for (let i = 0; i < firstDay; i++) {
-            html += `<div class="day-cell empty"></div>`;
-        }
+        for (let i = 0; i < firstDay; i++) html += `<div class="day-cell empty"></div>`;
 
         for (let d = 1; d <= daysInMonth; d++) {
             const isToday = (d === todayDate);
             const hasAct = activityDays.has(d);
             const isSelected = (selectedDayNum === d);
-            let classes = 'day-cell';
-            if (isToday) classes += ' today';
-            if (hasAct) classes += ' has-activity';
-            if (isSelected) classes += ' selected';
-            html += `<div class="${classes}" data-day="${d}">${d}</div>`;
+            let cls = 'day-cell';
+            if (isToday) cls += ' today';
+            if (hasAct) cls += ' has-activity';
+            if (isSelected) cls += ' selected';
+            html += `<div class="${cls}" data-day="${d}">${d}</div>`;
         }
 
         grid.innerHTML = html;
-
         grid.querySelectorAll('.day-cell:not(.empty)').forEach(cell => {
             cell.addEventListener('click', () => {
                 const day = parseInt(cell.dataset.day, 10);
@@ -793,7 +432,7 @@
     }
 
     // --------------------------------------------------------------
-    // 4. MAPA
+    // MAPA
     // --------------------------------------------------------------
     function initMap() {
         if (map) return;
@@ -814,9 +453,7 @@
             const marker = L.marker([coords.lat, coords.lng], {
                 title: act.Actividad || 'Actividad'
             }).addTo(map);
-            const fecha = act.Fecha;
-            const lugar = act.Lugar || '';
-            const popupContent = `<strong>${act.Actividad || 'Actividad'}</strong><br>${fecha} ${act.Hora || ''}<br>${lugar}`;
+            const popupContent = `<strong>${act.Actividad || 'Actividad'}</strong><br>${act.Fecha} ${act.Hora || ''}<br>${act.Lugar || ''}`;
             marker.bindPopup(popupContent);
             marker.on('click', () => {
                 map.setView([coords.lat, coords.lng], 13);
@@ -825,6 +462,7 @@
             markers.push(marker);
         });
 
+        // Centrar en el destacado
         if (highlightIndex >= 0 && highlightIndex < activities.length) {
             const act = activities[highlightIndex];
             const coords = parseCoords(act.Coordenadas);
@@ -838,21 +476,12 @@
     }
 
     function focusOnActivity(idx) {
-        if (!map || idx < 0 || idx >= allActivities.length) return;
-        const act = allActivities[idx];
-        const coords = parseCoords(act.Coordenadas);
-        if (!coords) {
-            // Si no tiene coordenadas, igual resaltamos pero no movemos el mapa
-            currentHighlightIndex = idx;
-            renderActivities(allActivities, currentHighlightIndex);
-            return;
-        }
-        map.setView([coords.lat, coords.lng], 13);
-        if (markers[idx]) {
-            markers[idx].openPopup();
-        }
+        if (idx < 0 || idx >= allActivities.length) return;
         currentHighlightIndex = idx;
-        renderActivities(allActivities, currentHighlightIndex);
+        // Actualizar marcadores y centrar
+        updateMarkers(allActivities, idx);
+        renderActivities(allActivities, idx);
+        const act = allActivities[idx];
         const date = parseDate(act.Fecha);
         if (date) {
             selectedDay = date.getDate();
@@ -861,7 +490,7 @@
     }
 
     // --------------------------------------------------------------
-    // 5. FILTRAR POR DÍA
+    // FILTRO POR DÍA
     // --------------------------------------------------------------
     function filterByDay(day) {
         selectedDay = day;
@@ -876,42 +505,43 @@
         }
         const firstIdx = allActivities.indexOf(filtered[0]);
         if (firstIdx >= 0) {
-            currentHighlightIndex = firstIdx;
-            renderActivities(allActivities, currentHighlightIndex);
-            updateMarkers(allActivities, currentHighlightIndex);
-            renderCalendar(allActivities, selectedDay);
+            focusOnActivity(firstIdx);
         }
     }
 
     // --------------------------------------------------------------
-    // 6. CARGA DE DATOS E INICIO
+    // CARGA DE DATOS
     // --------------------------------------------------------------
     async function loadData() {
         try {
             const response = await fetch(SPREADSHEET_CSV);
             const csvText = await response.text();
-            const rows = csvText.split('\n').filter(row => row.trim() !== '');
+            const rows = parseCSV(csvText);
             if (rows.length < 2) throw new Error('Datos insuficientes');
 
-            const headers = rows[0].split(',').map(h => h.trim());
+            const headers = rows[0].map(h => h.trim());
             const data = [];
             for (let i = 1; i < rows.length; i++) {
-                const cols = rows[i].split(',').map(c => c.trim());
-                if (cols.length < 6) continue;
+                const cols = rows[i];
                 const obj = {};
                 headers.forEach((h, idx) => {
-                    obj[h] = cols[idx] || '';
+                    obj[h] = (cols[idx] || '').trim();
                 });
-                Object.keys(obj).forEach(key => {
-                    obj[key] = obj[key].replace(/^"|"$/g, '').trim();
-                });
+                // Si la fila está vacía, la saltamos
+                if (!obj.Num && !obj.Fecha) continue;
                 data.push(obj);
             }
 
-            const filtered = data.filter(row => row.Num && row.Fecha);
-            // ORDENAR POR NÚMERO
-            filtered.sort(sortByNumber);
+            // Limpiar posibles comillas sobrantes
+            data.forEach(row => {
+                Object.keys(row).forEach(k => {
+                    row[k] = row[k].replace(/^"|"$/g, '').trim();
+                });
+            });
 
+            // Filtrar por número y fecha
+            const filtered = data.filter(row => row.Num && row.Fecha);
+            filtered.sort(sortByNumber);
             allActivities = filtered;
 
             if (allActivities.length === 0) {
@@ -937,11 +567,11 @@
             }
 
         } catch (error) {
-            console.error('Error cargando datos:', error);
+            console.error('Error:', error);
             document.getElementById('activityList').innerHTML = `
                 <div style="text-align:center;padding:30px 20px;color:#c0392b;">
                     <i class="fas fa-exclamation-circle" style="font-size:24px;"></i>
-                    <p style="margin-top:10px;">Error al cargar la agenda. Verifica la conexión y la URL de la hoja de cálculo.</p>
+                    <p style="margin-top:10px;">Error al cargar la agenda.</p>
                     <p style="font-size:13px;color:#666;">${error.message}</p>
                 </div>
             `;
@@ -959,9 +589,7 @@
     }
 
     window.addEventListener('resize', () => {
-        if (map) {
-            setTimeout(() => map.invalidateSize(), 200);
-        }
+        if (map) setTimeout(() => map.invalidateSize(), 200);
     });
 </script>
 </body>
